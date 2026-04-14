@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['docx'],
+  serverExternalPackages: ['docx', '@react-pdf/renderer'],
 };
 
 export default nextConfig;

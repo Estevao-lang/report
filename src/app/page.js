@@ -72,7 +72,7 @@ export default function HomePage() {
       const filename = cover.title.replace(/[^a-zA-Z0-9À-ÿ\s_-]/g, '').replace(/\s+/g, '_') || 'relatorio';
       const a        = document.createElement('a');
       a.href         = url;
-      a.download     = `${filename}.docx`;
+      a.download     = `${filename}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -96,7 +96,7 @@ export default function HomePage() {
               Meus Relatórios
             </h1>
             <p className="text-[#5DADE2] text-sm mt-0.5">
-              Cole o texto → baixe o <span className="font-semibold">.docx</span> profissional
+              Cole o texto → baixe o <span className="font-semibold">PDF</span> profissional
             </p>
           </div>
           <span className="hidden sm:block text-xs text-slate-400 border border-slate-600 rounded px-2 py-1 font-mono">
@@ -228,7 +228,7 @@ export default function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                     </svg>
-                    Gerar Relatório (.docx)
+                    Gerar Relatório (PDF)
                   </>
                 )}
               </button>
@@ -240,7 +240,7 @@ export default function HomePage() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-7xl mx-auto px-6 py-3 text-center text-xs text-slate-400">
-          SnaveUK Report Template · Cole o texto, receba o .docx profissional
+          SnaveUK Report Template · Cole o texto, receba o PDF profissional
         </div>
       </footer>
 

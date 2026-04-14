@@ -1,5 +1,7 @@
-import { buildDoc, cover as buildCover, spacer, divider, pMulti, txt, C, Packer } from '@/lib/report-template';
-import { parseContent } from '@/lib/text-parser';
+import React from 'react';
+import { renderToBuffer } from '@react-pdf/renderer';
+import { ReportDocument } from '@/lib/pdf-template';
+import { parseToPdfElements } from '@/lib/pdf-parser';
 
 export async function POST(request) {
   try {
@@ -10,60 +12,33 @@ export async function POST(request) {
       return Response.json({ error: 'O título do relatório é obrigatório.' }, { status: 400 });
     }
 
-    // Build cover metadata rows (only non-empty fields)
-    const meta = [
-      cover.project      && ['Projeto:',      cover.project],
-      cover.organization && ['Organização:',  cover.organization],
-      cover.date         && ['Data:',         cover.date],
-      cover.author       && ['Autor:',        cover.author],
-    ].filter(Boolean);
-
     // Header text for every page
     const headerParts = [cover.organization, cover.project, cover.title].filter(Boolean);
     const headerText  = headerParts.join('  |  ');
 
-    // Parse body content
-    const bodyElements = parseContent(content || '');
+    // Parse markdown content to React PDF elements
+    const elements = parseToPdfElements(content || '');
 
-    // End-of-report footer element
-    const { AlignmentType } = await import('docx');
-    const endLine = new (await import('docx')).Paragraph({
-      alignment: AlignmentType.CENTER,
-      children: [txt('— Fim do Relatório —', { italics: true, color: C.border })],
-    });
+    // Build and render PDF
+    const pdfBuffer = await renderToBuffer(
+      React.createElement(ReportDocument, { coverData: cover, elements, headerText })
+    );
 
-    const children = [
-      ...buildCover({
-        kind:     cover.kind     || 'Relatório',
-        title:    cover.title,
-        subtitle: cover.subtitle || '',
-        meta,
-      }),
-      ...bodyElements,
-      spacer(200),
-      divider(),
-      spacer(100),
-      endLine,
-    ];
-
-    const doc    = buildDoc({ headerText, children });
-    const buffer = await Packer.toBuffer(doc);
-
-    const safeFilename = cover.title
+    const safeFilename = (cover.title || 'relatorio')
       .replace(/[^a-zA-Z0-9\u00C0-\u024F\s_-]/g, '')
       .replace(/\s+/g, '_')
       .slice(0, 80) || 'relatorio';
 
-    return new Response(buffer, {
+    return new Response(pdfBuffer, {
       status: 200,
       headers: {
-        'Content-Type':        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'Content-Disposition': `attachment; filename="${safeFilename}.docx"`,
-        'Content-Length':      String(buffer.length),
+        'Content-Type':        'application/pdf',
+        'Content-Disposition': `attachment; filename="${safeFilename}.pdf"`,
+        'Content-Length':      String(pdfBuffer.length),
       },
     });
   } catch (err) {
-    console.error('[generate]', err);
-    return Response.json({ error: err.message || 'Erro interno ao gerar o relatório.' }, { status: 500 });
+    console.error('[generate-pdf]', err);
+    return Response.json({ error: err.message || 'Erro interno ao gerar o PDF.' }, { status: 500 });
   }
 }
