@@ -1,8 +1,8 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Meus Relatórios',
-  description: 'Cole o texto, baixe o .docx no template profissional SnaveUK.',
+  title: '     My Reports',
+  description: 'Paste the text → download professional reports in seconds',
 };
 
 export default function RootLayout({ children }) {
