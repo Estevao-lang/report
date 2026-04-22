@@ -2,9 +2,46 @@ import React from 'react';
 import { Text, View } from '@react-pdf/renderer';
 import { s, C, PAGE_W } from './pdf-template.js';
 
+// ── Emoji cleaner ──────────────────────────────────────────────────────────
+// Helvetica has no emoji glyphs — react-pdf outputs garbled chars.
+// Replace common emojis with ASCII equivalents, strip the rest.
+const EMOJI_SUBS = [
+  [/✅/gu,  '[✓]'],  [/☑/gu,    '[✓]'],
+  [/❌/gu,  '[✗]'],  [/🚫/gu,   '[✗]'],
+  [/⏳/gu,  ''],     [/🕐/gu,   ''],
+  [/⚠\uFE0F?/gu, '[!]'],
+  // Color circles — use ASCII so Helvetica can render them
+  [/🔴/gu,  '[!]'],  [/🟠/gu,  '[!]'],
+  [/🟡/gu,  '[~]'],  [/🟢/gu,  '[+]'],  [/🔵/gu,  '[i]'],
+  [/🚨/gu,  '[!]'],  [/📌/gu,  ''],     [/📋/gu,  ''],
+  // Geometric shape chars that Helvetica cannot render → safe ASCII
+  [/●/gu,   '*'],    [/○/gu,   '-'],
+  [/■/gu,   '[*]'],  [/□/gu,   '[ ]'],
+  [/▲/gu,   '^'],    [/▼/gu,   'v'],
+  [/\uFE0F/gu, ''],               // variation selector
+  [/\u200D/gu, ''],               // ZWJ
+  [/[\u{1F000}-\u{1FFFF}]/gu, ''],  // all emoji blocks
+  [/[\u{2300}-\u{23FF}]/gu, ''],    // misc technical (⏳ etc)
+  [/[\u{2600}-\u{26FF}]/gu, ''],    // misc symbols (⚠ etc)
+  // Geometric Shapes block — Helvetica has none of these
+  [/[\u{2500}-\u{25FF}]/gu, ''],
+  // Dingbats — keep ✓ (2713) and ✗ (2717), strip rest
+  [/[\u{2700}-\u{2712}]/gu, ''],
+  [/[\u{2714}-\u{2716}]/gu, ''],
+  [/[\u{2718}-\u{27BF}]/gu, ''],
+];
+
+function cleanEmoji(text) {
+  if (!text) return text;
+  let t = text;
+  for (const [re, rep] of EMOJI_SUBS) t = t.replace(re, rep);
+  return t;
+}
+
 // ── Inline formatter: **bold**, *italic*, `code` ───────────────────────────
 function parseInline(text) {
   if (!text) return '';
+  text = cleanEmoji(text);
   if (!text.includes('**') && !text.includes('*') && !text.includes('`')) return text;
 
   const parts = [];
@@ -121,11 +158,29 @@ const alertStyleMap = {
   success: { box: s.alertSuccess, text: s.alertTextSuccess },
 };
 
+// ── Heading heuristic ─────────────────────────────────────────────────────
+// Distinguishes "1. Executive Summary" (heading) from "1. install the package" (list).
+// Treats as heading when: text is ≤ 9 words, no sentence-ending punctuation,
+// first word starts uppercase, and ≥ 50 % of significant words are Title Case.
+function looksLikeHeading(text) {
+  if (!text) return false;
+  if (text.length > 90) return false;
+  if (/[.!?]$/.test(text.trimEnd())) return false;           // ends like a sentence
+  const words = text.trim().split(/\s+/);
+  if (words.length > 9) return false;
+  if (!words[0] || !/^[A-Z]/.test(words[0])) return false;  // must start uppercase
+  const sig = words.filter(w => w.length > 3 && /^[a-zA-Z]/.test(w));
+  if (sig.length === 0) return true;                          // only short words → treat as title
+  const capRatio = sig.filter(w => /^[A-Z]/.test(w)).length / sig.length;
+  return capRatio >= 0.5;
+}
+
 // ── Main parser ────────────────────────────────────────────────────────────
 export function parseToPdfElements(content) {
   if (!content?.trim()) return [];
 
-  const lines = content.split('\n');
+  // Clean emoji before line-by-line parsing (prevents garbled characters)
+  const lines = cleanEmoji(content).split('\n');
   const elements = [];
   let sectionCount = 0;
   let numCount = 0;
@@ -154,6 +209,26 @@ export function parseToPdfElements(content) {
           ))}
         </View>
       );
+      numCount = 0;
+      continue;
+    }
+
+    // ── TSV tables (tab-separated, copied from Notion / Sheets / GitHub) ──
+    if (line.includes('\t')) {
+      const tsvRows = [];
+      while (i < lines.length && lines[i].trimEnd().includes('\t')) {
+        tsvRows.push(lines[i].trimEnd().split('\t').map(c => c.trim()));
+        i++;
+      }
+      // Build pipe-table lines so renderTable can handle them uniformly
+      const pipeLines = tsvRows.map(cols => '| ' + cols.join(' | ') + ' |');
+      // Insert a separator row after the header so renderTable treats row 0 as header
+      if (pipeLines.length > 1) {
+        const colCount = tsvRows[0].length;
+        pipeLines.splice(1, 0, '| ' + Array(colCount).fill('---').join(' | ') + ' |');
+      }
+      const tbl = renderTable(pipeLines, `tbl-tsv-${i}`);
+      if (tbl) elements.push(tbl);
       numCount = 0;
       continue;
     }
@@ -255,17 +330,49 @@ export function parseToPdfElements(content) {
       i++; continue;
     }
 
-    // ── Numbered 1. item ──────────────────────────────────────────────────
+    // ── Numbered heading or numbered list item ────────────────────────────
     if (/^\d+\.\s+/.test(line)) {
-      numCount++;
       const text = line.replace(/^\d+\.\s+/, '').trim();
-      elements.push(
-        <View key={`num-${i}`} style={s.numRow}>
-          <Text style={s.numMarker}>{numCount}.</Text>
-          <Text style={s.numContent}>{parseInline(text)}</Text>
-        </View>
-      );
+      if (looksLikeHeading(text)) {
+        // Treat as a section heading (h2 style)
+        sectionCount++;
+        elements.push(
+          <Text key={`nh2-${i}`} style={s.h2}>{text}</Text>
+        );
+        numCount = 0;
+      } else {
+        numCount++;
+        elements.push(
+          <View key={`num-${i}`} style={s.numRow}>
+            <Text style={s.numMarker}>{numCount}.</Text>
+            <Text style={s.numContent}>{parseInline(text)}</Text>
+          </View>
+        );
+      }
       i++; continue;
+    }
+
+    // ── Label line: "Short phrase:" alone on a line → styled as h3 ─────────
+    // Catches "Affected Accounts:", "Actions Taken:", "Timeline:", etc.
+    // Rule: starts with a letter, no internal colon, ends with colon, ≤ 60 chars
+    if (/^[A-Za-zÀ-ÿ][^:\n]{0,58}:$/.test(line.trim())) {
+      elements.push(
+        <Text key={`lbl-${i}`} style={s.h3}>{line.trim()}</Text>
+      );
+      numCount = 0; i++; continue;
+    }
+
+    // ── ALL-CAPS line → treat as h2 ───────────────────────────────────────
+    // Catches "AWS MAINTENANCE REPORT", "ENVIRONMENT=dev" is in a code block so safe
+    // Rule: ≥ 5 chars, all uppercase letters/numbers/spaces/punctuation, no lowercase
+    {
+      const t = line.trim();
+      if (t.length >= 5 && !/[a-z]/.test(t) && /^[A-Z0-9\s\-—&/().,:!]+$/.test(t)) {
+        elements.push(
+          <Text key={`caps-${i}`} style={s.h2}>{t}</Text>
+        );
+        numCount = 0; i++; continue;
+      }
     }
 
     // ── Empty line ────────────────────────────────────────────────────────

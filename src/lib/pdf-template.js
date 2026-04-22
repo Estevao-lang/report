@@ -232,7 +232,7 @@ export function ReportDocument({ coverData, elements, headerText }) {
       {/* ── Page 1: Cover (no header/footer) ───────────────────────────── */}
       <Page size="LETTER" style={s.page}>
         <View style={{ marginTop: 90, marginBottom: 32 }}>
-          <Text style={s.coverKind}>{coverData.kind || 'Relatório'}</Text>
+          <Text style={s.coverKind}>{coverData.kind || 'Technical Report'}</Text>
           <Text style={s.coverTitle}>{coverData.title}</Text>
           {!!coverData.subtitle && (
             <Text style={s.coverSubtitle}>{coverData.subtitle}</Text>

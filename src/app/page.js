@@ -3,21 +3,25 @@
 import { useState } from 'react';
 
 const SYNTAX_GUIDE = [
-  { syntax: '# Título',               desc: 'Seção principal (auto-numerada)' },
-  { syntax: '## Subtítulo',           desc: 'Subseção' },
-  { syntax: '### Menor',              desc: 'Título menor (h3)' },
-  { syntax: '- item',                 desc: 'Bullet point' },
-  { syntax: '1. item',                desc: 'Lista numerada' },
-  { syntax: '- [x] item',             desc: 'Checklist ✓' },
-  { syntax: '> [info] texto',         desc: 'Caixa info/warning/danger/success' },
-  { syntax: '```...```',              desc: 'Bloco de código (multi-linha)' },
-  { syntax: '**negrito** `código`',   desc: 'Formatação inline' },
-  { syntax: '---',                    desc: 'Divisória horizontal' },
-  { syntax: '===',                    desc: 'Quebra de página' },
+  { syntax: '# Título',                    desc: 'Seção principal (auto-numerada)' },
+  { syntax: '## Subtítulo',                desc: 'Subseção' },
+  { syntax: '### Menor',                   desc: 'Título menor (h3)' },
+  { syntax: '- item',                      desc: 'Bullet point' },
+  { syntax: '1. item',                     desc: 'Lista numerada (minúscula = item)' },
+  { syntax: '1. Executive Summary',        desc: 'Heading numerado (Title Case = seção)' },
+  { syntax: '- [x] item',                  desc: 'Checklist ✓' },
+  { syntax: '> [info] texto',              desc: 'Caixa info/warning/danger/success' },
+  { syntax: '| Col | Col |\\n|---|---|',   desc: 'Tabela pipe (markdown)' },
+  { syntax: 'Col\\tCol\\tCol',            desc: 'Tabela TSV — colado do Notion/Sheets' },
+  { syntax: '```...```',                   desc: 'Bloco de código (multi-linha)' },
+  { syntax: '**negrito** `código`',        desc: 'Formatação inline' },
+  { syntax: '---',                         desc: 'Divisória horizontal' },
+  { syntax: '===',                         desc: 'Quebra de página' },
+  { syntax: 'Emojis ✅ ⏳ 🔴',            desc: 'Convertidos para texto ([✓] [Pending] ●)' },
 ];
 
 const COVER_FIELDS = [
-  { key: 'kind',         label: 'Tipo de documento', placeholder: 'Relatório Técnico' },
+  { key: 'kind',         label: 'Tipo de documento', placeholder: 'Technical Report' },
   { key: 'title',        label: 'Título *',           placeholder: 'Título do Relatório' },
   { key: 'subtitle',     label: 'Subtítulo',          placeholder: 'Descrição breve' },
   { key: 'project',      label: 'Projeto',            placeholder: 'Nome do Projeto' },
@@ -32,7 +36,7 @@ function todayLabel() {
 
 export default function HomePage() {
   const [cover, setCover] = useState({
-    kind:         'Relatório Técnico',
+    kind:         'Technical Report',
     title:        '',
     subtitle:     '',
     project:      '',
