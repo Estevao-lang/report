@@ -98,7 +98,7 @@ function example() {
 
 ## 3. Generate the PDF
 
-Click **Gerar Relatório (PDF)**.
+Click **Generate Report (PDF)**.
 
 The file is downloaded automatically with a name based on the title you filled in.
 
