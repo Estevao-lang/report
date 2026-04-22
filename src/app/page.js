@@ -3,35 +3,35 @@
 import { useState } from 'react';
 
 const SYNTAX_GUIDE = [
-  { syntax: '# Título',                    desc: 'Seção principal (auto-numerada)' },
-  { syntax: '## Subtítulo',                desc: 'Subseção' },
-  { syntax: '### Menor',                   desc: 'Título menor (h3)' },
+  { syntax: '# Heading',                   desc: 'Main section (auto-numbered)' },
+  { syntax: '## Subheading',               desc: 'Subsection' },
+  { syntax: '### Minor',                   desc: 'Smaller heading (h3)' },
   { syntax: '- item',                      desc: 'Bullet point' },
-  { syntax: '1. item',                     desc: 'Lista numerada (minúscula = item)' },
-  { syntax: '1. Executive Summary',        desc: 'Heading numerado (Title Case = seção)' },
+  { syntax: '1. item',                     desc: 'Numbered list (lowercase = item)' },
+  { syntax: '1. Executive Summary',        desc: 'Numbered heading (Title Case = section)' },
   { syntax: '- [x] item',                  desc: 'Checklist ✓' },
-  { syntax: '> [info] texto',              desc: 'Caixa info/warning/danger/success' },
-  { syntax: '| Col | Col |\\n|---|---|',   desc: 'Tabela pipe (markdown)' },
-  { syntax: 'Col\\tCol\\tCol',            desc: 'Tabela TSV — colado do Notion/Sheets' },
-  { syntax: '```...```',                   desc: 'Bloco de código (multi-linha)' },
-  { syntax: '**negrito** `código`',        desc: 'Formatação inline' },
-  { syntax: '---',                         desc: 'Divisória horizontal' },
-  { syntax: '===',                         desc: 'Quebra de página' },
-  { syntax: 'Emojis ✅ ⏳ 🔴',            desc: 'Convertidos para texto ([✓] [Pending] ●)' },
+  { syntax: '> [info] text',               desc: 'Info/warning/danger/success box' },
+  { syntax: '| Col | Col |\\n|---|---|',   desc: 'Pipe table (markdown)' },
+  { syntax: 'Col\\tCol\\tCol',            desc: 'TSV table — pasted from Notion/Sheets' },
+  { syntax: '```...```',                   desc: 'Code block (multi-line)' },
+  { syntax: '**bold** `code`',             desc: 'Inline formatting' },
+  { syntax: '---',                         desc: 'Horizontal divider' },
+  { syntax: '===',                         desc: 'Page break' },
+  { syntax: 'Emojis ✅ ⏳ 🔴',            desc: 'Converted to text ([✓] [Pending] ●)' },
 ];
 
 const COVER_FIELDS = [
-  { key: 'kind',         label: 'Tipo de documento', placeholder: 'Technical Report' },
-  { key: 'title',        label: 'Título *',           placeholder: 'Título do Relatório' },
-  { key: 'subtitle',     label: 'Subtítulo',          placeholder: 'Descrição breve' },
-  { key: 'project',      label: 'Projeto',            placeholder: 'Nome do Projeto' },
-  { key: 'organization', label: 'Organização',        placeholder: 'SnaveUK' },
-  { key: 'author',       label: 'Autor',              placeholder: 'Seu nome' },
-  { key: 'date',         label: 'Data',               placeholder: 'Abril 2026' },
+  { key: 'kind',         label: 'Document type', placeholder: 'Technical Report' },
+  { key: 'title',        label: 'Title *',        placeholder: 'Report Title' },
+  { key: 'subtitle',     label: 'Subtitle',       placeholder: 'Brief description' },
+  { key: 'project',      label: 'Project',        placeholder: 'Project name' },
+  { key: 'organization', label: 'Organization',   placeholder: 'SnaveUK' },
+  { key: 'author',       label: 'Author',         placeholder: 'Your name' },
+  { key: 'date',         label: 'Date',           placeholder: 'April 2026' },
 ];
 
 function todayLabel() {
-  return new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
 export default function HomePage() {
@@ -53,8 +53,8 @@ export default function HomePage() {
   const updateCover = (key, value) => setCover(prev => ({ ...prev, [key]: value }));
 
   const handleGenerate = async () => {
-    if (!cover.title.trim()) { setError('O título do relatório é obrigatório.'); return; }
-    if (!content.trim())     { setError('O conteúdo do relatório está vazio.');  return; }
+    if (!cover.title.trim()) { setError('The report title is required.'); return; }
+    if (!content.trim())     { setError('The report content is empty.');  return; }
     setError('');
     setLoading(true);
     setDownloaded(false);
@@ -68,12 +68,12 @@ export default function HomePage() {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({}));
-        throw new Error(json.error || `Erro ${res.status}`);
+        throw new Error(json.error || `Error ${res.status}`);
       }
 
       const blob     = await res.blob();
       const url      = URL.createObjectURL(blob);
-      const filename = cover.title.replace(/[^a-zA-Z0-9À-ÿ\s_-]/g, '').replace(/\s+/g, '_') || 'relatorio';
+      const filename = cover.title.replace(/[^a-zA-Z0-9À-ÿ\s_-]/g, '').replace(/\s+/g, '_') || 'report';
       const a        = document.createElement('a');
       a.href         = url;
       a.download     = `${filename}.pdf`;
@@ -97,10 +97,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-white text-2xl font-bold tracking-tight leading-tight">
-              Meus Relatórios
+              My Reports
             </h1>
             <p className="text-[#5DADE2] text-sm mt-0.5">
-              Cole o texto → baixe o <span className="font-semibold">PDF</span> profissional
+              Paste the text → download professional <span className="font-semibold">PDF</span>
             </p>
           </div>
           <span className="hidden sm:block text-xs text-slate-400 border border-slate-600 rounded px-2 py-1 font-mono">
@@ -117,7 +117,7 @@ export default function HomePage() {
           <aside className="xl:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 xl:sticky xl:top-6">
               <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest mb-4 pb-2 border-b border-slate-100">
-                Capa do Relatório
+                Report Cover
               </h2>
 
               <div className="space-y-3">
@@ -146,13 +146,13 @@ export default function HomePage() {
               {/* Toolbar */}
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">
-                  Conteúdo do Relatório
+                  Report Content
                 </h2>
                 <button
                   onClick={() => setShowGuide(g => !g)}
                   className="text-xs text-[#2E86C1] hover:text-[#1A3C5E] font-medium transition"
                 >
-                  {showGuide ? '▲ Ocultar sintaxe' : '▼ Ver sintaxe'}
+                  {showGuide ? '▲ Hide syntax' : '▼ Show syntax'}
                 </button>
               </div>
 
@@ -160,7 +160,7 @@ export default function HomePage() {
               {showGuide && (
                 <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
                   <div className="px-4 py-2 bg-slate-100 border-b border-slate-200">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Sintaxe suportada</p>
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Supported syntax</p>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
                     {SYNTAX_GUIDE.map(({ syntax, desc }, idx) => (
@@ -180,7 +180,7 @@ export default function HomePage() {
               <textarea
                 value={content}
                 onChange={e => { setContent(e.target.value); setDownloaded(false); }}
-                placeholder={`Cole ou escreva o conteúdo aqui...\n\nExemplo:\n# Introdução\nEscreva o texto do relatório.\n\n## Subseção\n- Bullet point\n- Outro item com **negrito**\n\n> [info] Uma nota informativa.\n\n1. Item numerado\n2. Outro item\n\n- [x] Tarefa concluída\n\n===\n\n# Segunda Seção\n\`\`\`\nfunction exemplo() {\n  return 'código aqui';\n}\n\`\`\``}
+                placeholder={`Paste or write the content here...\n\nExample:\n# Introduction\nWrite the report text here.\n\n## Subsection\n- Bullet point\n- Another item with **bold**\n\n> [info] An informative note.\n\n1. Numbered item\n2. Another item\n\n- [x] Task completed\n\n===\n\n# Second Section\n\`\`\`\nfunction example() {\n  return 'code here';\n}\n\`\`\``}
                 className="w-full h-[460px] px-4 py-3 text-sm font-mono rounded-xl border border-slate-300 bg-slate-50
                            focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent
                            resize-y placeholder:text-slate-300 placeholder:font-sans leading-relaxed transition"
@@ -189,10 +189,10 @@ export default function HomePage() {
 
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-slate-400 font-mono">
-                  {content.length > 0 ? `${content.length} caracteres · ${content.split('\n').length} linhas` : ''}
+                  {content.length > 0 ? `${content.length} characters · ${content.split('\n').length} lines` : ''}
                 </span>
                 {downloaded && (
-                  <span className="text-xs text-green-600 font-medium">✓ Arquivo baixado com sucesso!</span>
+                  <span className="text-xs text-green-600 font-medium">✓ File downloaded successfully!</span>
                 )}
               </div>
             </div>
@@ -224,7 +224,7 @@ export default function HomePage() {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                     </svg>
-                    Gerando relatório…
+                    Generating report…
                   </>
                 ) : (
                   <>
@@ -232,7 +232,7 @@ export default function HomePage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                             d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
                     </svg>
-                    Gerar Relatório (PDF)
+                    Generate Report (PDF)
                   </>
                 )}
               </button>
@@ -244,7 +244,7 @@ export default function HomePage() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-7xl mx-auto px-6 py-3 text-center text-xs text-slate-400">
-          SnaveUK Report Template · Cole o texto, receba o PDF profissional
+          SnaveUK Report Template · Paste the text, get professional PDF
         </div>
       </footer>
 
