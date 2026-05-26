@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, View } from '@react-pdf/renderer';
+import { Image, Text, View } from '@react-pdf/renderer';
 import { s, C, PAGE_W } from './pdf-template.js';
 
 // ── Emoji cleaner ──────────────────────────────────────────────────────────
@@ -176,7 +176,7 @@ function looksLikeHeading(text) {
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
-export function parseToPdfElements(content) {
+export function parseToPdfElements(content, images = {}) {
   if (!content?.trim()) return [];
 
   // Clean emoji before line-by-line parsing (prevents garbled characters)
@@ -247,6 +247,30 @@ export function parseToPdfElements(content) {
     }
 
     // ── Alert boxes > [type] ──────────────────────────────────────────────
+    const imageMatch = line.match(/^!\[([^\]]*)\]\(([^)]+)\)\s*$/);
+    if (imageMatch) {
+      const caption = imageMatch[1].trim();
+      const source = imageMatch[2].trim();
+      const imageId = source.replace(/^image:/, '');
+      const src = source.startsWith('image:') ? images[imageId] : source;
+
+      if (src) {
+        elements.push(
+          <View key={`img-${i}`} style={s.imageWrap} wrap={false}>
+            <Image src={src} style={s.reportImage} />
+            {caption ? <Text style={s.imageCaption}>{caption}</Text> : null}
+          </View>
+        );
+      } else {
+        elements.push(
+          <View key={`img-missing-${i}`} style={[s.alertBox, s.alertWarning]}>
+            <Text style={[s.alertText, s.alertTextWarning]}>Image not found: {source}</Text>
+          </View>
+        );
+      }
+      numCount = 0; i++; continue;
+    }
+
     const alertMatch = line.match(/^>\s*\[(warning|danger|info|success)\]\s*(.*)/i);
     if (alertMatch) {
       const type   = alertMatch[1].toLowerCase();

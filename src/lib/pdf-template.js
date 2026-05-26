@@ -199,6 +199,25 @@ export const s = StyleSheet.create({
   blockquoteText:  { fontSize: 10, color: C.dark,    lineHeight: 1.55, marginBottom: 3 },
   blockquoteLabel: { fontSize: 10, fontFamily: 'Helvetica-Bold', color: C.primary, marginBottom: 4 },
 
+  // Images
+  imageWrap: {
+    width:        PAGE_W,
+    marginTop:     6,
+    marginBottom: 12,
+  },
+  reportImage: {
+    width:     PAGE_W,
+    maxHeight: 320,
+    objectFit: 'contain',
+  },
+  imageCaption: {
+    fontSize:   8.5,
+    color:      C.border,
+    fontFamily: 'Helvetica-Oblique',
+    textAlign:  'center',
+    marginTop:   4,
+  },
+
   // ── Misc ────────────────────────────────────────────────────────────────
   divider: {
     width:             PAGE_W,

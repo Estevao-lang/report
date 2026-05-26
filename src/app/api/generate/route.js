@@ -6,7 +6,7 @@ import { parseToPdfElements } from '@/lib/pdf-parser';
 export async function POST(request) {
   try {
     const body = await request.json();
-    const { cover, content } = body;
+    const { cover, content, images = {} } = body;
 
     if (!cover?.title?.trim()) {
       return Response.json({ error: 'O título do relatório é obrigatório.' }, { status: 400 });
@@ -17,7 +17,7 @@ export async function POST(request) {
     const headerText  = headerParts.join('  |  ');
 
     // Parse markdown content to React PDF elements
-    const elements = parseToPdfElements(content || '');
+    const elements = parseToPdfElements(content || '', images);
 
     // Build and render PDF
     const pdfBuffer = await renderToBuffer(
