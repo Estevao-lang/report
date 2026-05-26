@@ -1,7 +1,15 @@
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { ReportDocument } from '@/lib/pdf-template';
 import { parseToPdfElements } from '@/lib/pdf-parser';
+
+async function getBrandLogo() {
+  const logoPath = path.join(process.cwd(), 'public', 'snave-uk-ltd-logo.png');
+  const logo = await readFile(logoPath);
+  return `data:image/png;base64,${logo.toString('base64')}`;
+}
 
 export async function POST(request) {
   try {
@@ -18,10 +26,11 @@ export async function POST(request) {
 
     // Parse markdown content to React PDF elements
     const elements = parseToPdfElements(content || '', images);
+    const logoSrc = await getBrandLogo();
 
     // Build and render PDF
     const pdfBuffer = await renderToBuffer(
-      React.createElement(ReportDocument, { coverData: cover, elements, headerText })
+      React.createElement(ReportDocument, { coverData: cover, elements, headerText, logoSrc })
     );
 
     const safeFilename = (cover.title || 'relatorio')

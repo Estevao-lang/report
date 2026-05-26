@@ -5,6 +5,8 @@ import { PDFViewer } from '@react-pdf/renderer';
 import { ReportDocument } from '@/lib/pdf-template';
 import { parseToPdfElements } from '@/lib/pdf-parser';
 
+const BRAND_LOGO = '/snave-uk-ltd-logo.png';
+
 const SYNTAX_GUIDE = [
   { syntax: '# Heading',                 desc: 'Main section (auto-numbered)' },
   { syntax: '## Subheading',             desc: 'Subsection' },
@@ -226,7 +228,7 @@ export default function HomePage() {
             </div>
             <div className="h-[calc(100vh-220px)] min-h-[640px] bg-slate-200">
               <PDFViewer width="100%" height="100%" showToolbar>
-                <ReportDocument coverData={cover} elements={previewElements} headerText={headerText} />
+                <ReportDocument coverData={cover} elements={previewElements} headerText={headerText} logoSrc={BRAND_LOGO} />
               </PDFViewer>
             </div>
           </div>
@@ -244,7 +246,7 @@ export default function HomePage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-[#5DADE2]">New updates</p>
-                  <h2 className="mt-1 text-xl font-bold text-white">Preview and images are ready</h2>
+                  <h2 className="mt-1 text-xl font-bold text-white">Preview, images and Snave branding</h2>
                 </div>
                 <button
                   type="button"
@@ -264,6 +266,13 @@ export default function HomePage() {
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">Preview before download</h3>
                 <p className="mt-1 text-sm text-slate-600">
                   Fill the cover and content, then click <span className="font-semibold">Preview Report</span>. Review the PDF and use <span className="font-semibold">Download PDF</span> only when it looks right.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-[#1A3C5E]">Snave visual identity</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Reports now use the Snave logo on the cover, a red and grey palette, and a subtle transparent logo in the internal page header.
                 </p>
               </div>
 

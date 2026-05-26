@@ -1,22 +1,22 @@
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Image, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
 
 // ── Color palette ──────────────────────────────────────────────────────────
 export const C = {
-  primary:   '#1A3C5E',
-  accent:    '#2E86C1',
+  primary:   '#4B4F54',
+  accent:    '#C92234',
   success:   '#27AE60',
   warning:   '#F39C12',
   danger:    '#E74C3C',
-  dark:      '#2C3E50',
-  border:    '#BDC3C7',
+  dark:      '#2F3438',
+  border:    '#A7ADB2',
   white:     '#FFFFFF',
   lightGray: '#F8F9FA',
-  medGray:   '#E9ECEF',
+  medGray:   '#E3E5E7',
   warningBg: '#FEF9E7',
   dangerBg:  '#FDEDEC',
   successBg: '#EAFAF1',
-  lightBg:   '#EBF5FB',
+  lightBg:   '#FFF1F3',
 };
 
 // US Letter: 612 × 792 pt.  1" margins → content = 468 × 648 pt.
@@ -50,6 +50,15 @@ export const s = StyleSheet.create({
     color:         C.border,
     fontFamily:   'Helvetica-Oblique',
   },
+  pageHeaderLogo: {
+    position: 'absolute',
+    top:       18,
+    left:      72,
+    width:     72,
+    height:    24,
+    objectFit: 'contain',
+    opacity:    0.38,
+  },
   pageFooter: {
     position:  'absolute',
     bottom:     24,
@@ -61,11 +70,23 @@ export const s = StyleSheet.create({
   },
 
   // ── Cover ───────────────────────────────────────────────────────────────
+  coverLogo: {
+    width:        168,
+    height:        54,
+    objectFit: 'contain',
+    marginBottom:  18,
+  },
+  brandBar: {
+    width:            112,
+    height:             3,
+    backgroundColor: C.accent,
+    marginBottom:     34,
+  },
   coverKind: {
     fontSize:     11,
     color:        C.accent,
     fontFamily:  'Helvetica-Bold',
-    marginBottom:  8,
+    marginBottom: 10,
   },
   coverTitle: {
     fontSize:     30,
@@ -76,7 +97,7 @@ export const s = StyleSheet.create({
   },
   coverSubtitle: {
     fontSize:     15,
-    color:        C.accent,
+    color:        C.dark,
     marginBottom: 16,
   },
   coverDivider: {
@@ -109,7 +130,7 @@ export const s = StyleSheet.create({
   h1: {
     fontFamily:   'Helvetica-Bold',
     fontSize:      18,
-    color:         C.primary,
+    color:         C.accent,
     marginTop:     20,
     marginBottom:   8,
     lineHeight:    1.2,
@@ -117,7 +138,7 @@ export const s = StyleSheet.create({
   h2: {
     fontFamily:   'Helvetica-Bold',
     fontSize:      14,
-    color:         C.accent,
+    color:         C.primary,
     marginTop:     16,
     marginBottom:   6,
   },
@@ -238,7 +259,7 @@ export const s = StyleSheet.create({
 });
 
 // ── Main Document component ────────────────────────────────────────────────
-export function ReportDocument({ coverData, elements, headerText }) {
+export function ReportDocument({ coverData, elements, headerText, logoSrc }) {
   const meta = [
     coverData.project      && ['Project:',      coverData.project],
     coverData.organization && ['Organization:', coverData.organization],
@@ -257,6 +278,8 @@ export function ReportDocument({ coverData, elements, headerText }) {
       {/* ── Page 1: Cover (no header/footer) ───────────────────────────── */}
       <Page size="LETTER" style={s.page}>
         <View style={{ marginTop: 90, marginBottom: 32 }}>
+          {logoSrc ? <Image src={logoSrc} style={s.coverLogo} /> : null}
+          <View style={s.brandBar} />
           <Text style={s.coverKind}>{coverData.kind || 'Technical Report'}</Text>
           <Text style={s.coverTitle}>{coverData.title}</Text>
           {!!coverData.subtitle && (
@@ -278,6 +301,8 @@ export function ReportDocument({ coverData, elements, headerText }) {
       <Page size="LETTER" style={s.page}>
 
         {/* Header: left:0, width:PAGE_PW — yoga resolves width without right constraint */}
+        {logoSrc ? <Image src={logoSrc} style={s.pageHeaderLogo} fixed /> : null}
+
         <Text
           style={s.pageHeader}
           fixed
