@@ -228,7 +228,13 @@ export function ReportDocument({ coverData, elements, headerText }) {
   ].filter(Boolean);
 
   return (
-    <Document>
+    <Document
+      title={coverData.title || 'Report'}
+      author={coverData.author || coverData.organization || undefined}
+      subject={coverData.subtitle || coverData.project || undefined}
+      creator="My Reports"
+      producer="My Reports"
+    >
       {/* ── Page 1: Cover (no header/footer) ───────────────────────────── */}
       <Page size="LETTER" style={s.page}>
         <View style={{ marginTop: 90, marginBottom: 32 }}>

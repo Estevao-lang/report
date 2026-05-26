@@ -1,23 +1,26 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { PDFViewer } from '@react-pdf/renderer';
+import { ReportDocument } from '@/lib/pdf-template';
+import { parseToPdfElements } from '@/lib/pdf-parser';
 
 const SYNTAX_GUIDE = [
-  { syntax: '# Heading',                   desc: 'Main section (auto-numbered)' },
-  { syntax: '## Subheading',               desc: 'Subsection' },
-  { syntax: '### Minor',                   desc: 'Smaller heading (h3)' },
-  { syntax: '- item',                      desc: 'Bullet point' },
-  { syntax: '1. item',                     desc: 'Numbered list (lowercase = item)' },
-  { syntax: '1. Executive Summary',        desc: 'Numbered heading (Title Case = section)' },
-  { syntax: '- [x] item',                  desc: 'Checklist ✓' },
-  { syntax: '> [info] text',               desc: 'Info/warning/danger/success box' },
-  { syntax: '| Col | Col |\\n|---|---|',   desc: 'Pipe table (markdown)' },
-  { syntax: 'Col\\tCol\\tCol',            desc: 'TSV table — pasted from Notion/Sheets' },
-  { syntax: '```...```',                   desc: 'Code block (multi-line)' },
-  { syntax: '**bold** `code`',             desc: 'Inline formatting' },
-  { syntax: '---',                         desc: 'Horizontal divider' },
-  { syntax: '===',                         desc: 'Page break' },
-  { syntax: 'Emojis ✅ ⏳ 🔴',            desc: 'Converted to text ([✓] [Pending] ●)' },
+  { syntax: '# Heading',                 desc: 'Main section (auto-numbered)' },
+  { syntax: '## Subheading',             desc: 'Subsection' },
+  { syntax: '### Minor',                 desc: 'Smaller heading (h3)' },
+  { syntax: '- item',                    desc: 'Bullet point' },
+  { syntax: '1. item',                   desc: 'Numbered list (lowercase = item)' },
+  { syntax: '1. Executive Summary',      desc: 'Numbered heading (Title Case = section)' },
+  { syntax: '- [x] item',                desc: 'Checklist' },
+  { syntax: '> [info] text',             desc: 'Info/warning/danger/success box' },
+  { syntax: '| Col | Col |\\n|---|---|', desc: 'Pipe table (markdown)' },
+  { syntax: 'Col\\tCol\\tCol',          desc: 'TSV table pasted from Notion/Sheets' },
+  { syntax: '```...```',                 desc: 'Code block (multi-line)' },
+  { syntax: '**bold** `code`',           desc: 'Inline formatting' },
+  { syntax: '---',                       desc: 'Horizontal divider' },
+  { syntax: '===',                       desc: 'Page break' },
+  { syntax: 'Emojis',                    desc: 'Converted to PDF-safe text' },
 ];
 
 const COVER_FIELDS = [
@@ -44,17 +47,45 @@ export default function HomePage() {
     author:       '',
     date:         todayLabel(),
   });
-  const [content,     setContent]     = useState('');
-  const [loading,     setLoading]     = useState(false);
-  const [error,       setError]       = useState('');
-  const [showGuide,   setShowGuide]   = useState(false);
-  const [downloaded,  setDownloaded]  = useState(false);
+  const [content, setContent] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [showGuide, setShowGuide] = useState(false);
+  const [downloaded, setDownloaded] = useState(false);
+  const [previewMode, setPreviewMode] = useState(false);
 
-  const updateCover = (key, value) => setCover(prev => ({ ...prev, [key]: value }));
+  const headerText = useMemo(
+    () => [cover.organization, cover.project, cover.title].filter(Boolean).join('  |  '),
+    [cover.organization, cover.project, cover.title]
+  );
+  const previewElements = useMemo(() => parseToPdfElements(content || ''), [content]);
+
+  const updateCover = (key, value) => {
+    setCover(prev => ({ ...prev, [key]: value }));
+    setDownloaded(false);
+  };
+
+  const validateReport = () => {
+    if (!cover.title.trim()) {
+      setError('The report title is required.');
+      return false;
+    }
+    if (!content.trim()) {
+      setError('The report content is empty.');
+      return false;
+    }
+    return true;
+  };
+
+  const handlePreview = () => {
+    if (!validateReport()) return;
+    setError('');
+    setDownloaded(false);
+    setPreviewMode(true);
+  };
 
   const handleGenerate = async () => {
-    if (!cover.title.trim()) { setError('The report title is required.'); return; }
-    if (!content.trim())     { setError('The report content is empty.');  return; }
+    if (!validateReport()) return;
     setError('');
     setLoading(true);
     setDownloaded(false);
@@ -71,12 +102,14 @@ export default function HomePage() {
         throw new Error(json.error || `Error ${res.status}`);
       }
 
-      const blob     = await res.blob();
-      const url      = URL.createObjectURL(blob);
-      const filename = cover.title.replace(/[^a-zA-Z0-9À-ÿ\s_-]/g, '').replace(/\s+/g, '_') || 'report';
-      const a        = document.createElement('a');
-      a.href         = url;
-      a.download     = `${filename}.pdf`;
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const filename = cover.title
+        .replace(/[^a-zA-Z0-9\u00C0-\u024F\s_-]/g, '')
+        .replace(/\s+/g, '_') || 'report';
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${filename}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -89,18 +122,93 @@ export default function HomePage() {
     }
   };
 
+  if (previewMode) {
+    return (
+      <div className="min-h-screen flex flex-col bg-slate-100">
+        <header className="bg-[#1A3C5E] shadow-lg flex-shrink-0">
+          <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-white text-2xl font-bold tracking-tight leading-tight">Report Preview</h1>
+              <p className="text-[#5DADE2] text-sm mt-0.5">Review the PDF before downloading the final report</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                onClick={() => { setPreviewMode(false); setDownloaded(false); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-slate-500 text-sm font-semibold text-white hover:bg-white/10 transition"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Edit report
+              </button>
+              <button
+                onClick={handleGenerate}
+                disabled={loading}
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-white hover:bg-[#EBF5FB] disabled:opacity-50 disabled:cursor-not-allowed text-[#1A3C5E] font-semibold text-sm rounded-lg shadow-md transition"
+              >
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                    Generating PDF...
+                  </>
+                ) : (
+                  <>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    Download PDF
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-6">
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
+              <span className="text-red-500">!</span> {error}
+            </div>
+          )}
+          {downloaded && (
+            <div className="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm">
+              File downloaded successfully.
+            </div>
+          )}
+
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-5 py-3 border-b border-slate-200 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">{cover.title}</h2>
+                <p className="text-xs text-slate-500">
+                  {cover.organization || 'No organization'} {cover.project ? `| ${cover.project}` : ''}
+                </p>
+              </div>
+              <span className="text-xs text-slate-400 font-mono">{content.split('\n').length} lines</span>
+            </div>
+            <div className="h-[calc(100vh-220px)] min-h-[640px] bg-slate-200">
+              <PDFViewer width="100%" height="100%" showToolbar>
+                <ReportDocument coverData={cover} elements={previewElements} headerText={headerText} />
+              </PDFViewer>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
-
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="bg-[#1A3C5E] shadow-lg flex-shrink-0">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-white text-2xl font-bold tracking-tight leading-tight">
-              My Reports
-            </h1>
+            <h1 className="text-white text-2xl font-bold tracking-tight leading-tight">My Reports</h1>
             <p className="text-[#5DADE2] text-sm mt-0.5">
-              Paste the text → download professional <span className="font-semibold">PDF</span>
+              Paste the text, preview it, then download a professional <span className="font-semibold">PDF</span>
             </p>
           </div>
           <span className="hidden sm:block text-xs text-slate-400 border border-slate-600 rounded px-2 py-1 font-mono">
@@ -109,17 +217,13 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* ── Main ───────────────────────────────────────────────────────────── */}
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 py-8">
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
-
-          {/* ── Cover sidebar ──────────────────────────────────────────────── */}
           <aside className="xl:col-span-1">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5 xl:sticky xl:top-6">
               <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest mb-4 pb-2 border-b border-slate-100">
                 Report Cover
               </h2>
-
               <div className="space-y-3">
                 {COVER_FIELDS.map(({ key, label, placeholder }) => (
                   <div key={key}>
@@ -129,9 +233,7 @@ export default function HomePage() {
                       value={cover[key]}
                       onChange={e => updateCover(key, e.target.value)}
                       placeholder={placeholder}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50
-                                 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent
-                                 placeholder:text-slate-300 transition"
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent placeholder:text-slate-300 transition"
                     />
                   </div>
                 ))}
@@ -139,24 +241,18 @@ export default function HomePage() {
             </div>
           </aside>
 
-          {/* ── Content area ───────────────────────────────────────────────── */}
           <section className="xl:col-span-3 space-y-5">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-
-              {/* Toolbar */}
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">
-                  Report Content
-                </h2>
+                <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">Report Content</h2>
                 <button
                   onClick={() => setShowGuide(g => !g)}
                   className="text-xs text-[#2E86C1] hover:text-[#1A3C5E] font-medium transition"
                 >
-                  {showGuide ? '▲ Hide syntax' : '▼ Show syntax'}
+                  {showGuide ? 'Hide syntax' : 'Show syntax'}
                 </button>
               </div>
 
-              {/* Syntax guide */}
               {showGuide && (
                 <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden">
                   <div className="px-4 py-2 bg-slate-100 border-b border-slate-200">
@@ -164,10 +260,7 @@ export default function HomePage() {
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-0">
                     {SYNTAX_GUIDE.map(({ syntax, desc }, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-baseline gap-3 px-4 py-2 border-b border-slate-100 last:border-0"
-                      >
+                      <div key={idx} className="flex items-baseline gap-3 px-4 py-2 border-b border-slate-100 last:border-0">
                         <code className="text-xs font-mono text-[#2E86C1] whitespace-nowrap flex-shrink-0">{syntax}</code>
                         <span className="text-xs text-slate-500">{desc}</span>
                       </div>
@@ -176,78 +269,50 @@ export default function HomePage() {
                 </div>
               )}
 
-              {/* Textarea */}
               <textarea
                 value={content}
                 onChange={e => { setContent(e.target.value); setDownloaded(false); }}
                 placeholder={`Paste or write the content here...\n\nExample:\n# Introduction\nWrite the report text here.\n\n## Subsection\n- Bullet point\n- Another item with **bold**\n\n> [info] An informative note.\n\n1. Numbered item\n2. Another item\n\n- [x] Task completed\n\n===\n\n# Second Section\n\`\`\`\nfunction example() {\n  return 'code here';\n}\n\`\`\``}
-                className="w-full h-[460px] px-4 py-3 text-sm font-mono rounded-xl border border-slate-300 bg-slate-50
-                           focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent
-                           resize-y placeholder:text-slate-300 placeholder:font-sans leading-relaxed transition"
+                className="w-full h-[460px] px-4 py-3 text-sm font-mono rounded-xl border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent resize-y placeholder:text-slate-300 placeholder:font-sans leading-relaxed transition"
                 spellCheck={false}
               />
 
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-slate-400 font-mono">
-                  {content.length > 0 ? `${content.length} characters · ${content.split('\n').length} lines` : ''}
+                  {content.length > 0 ? `${content.length} characters | ${content.split('\n').length} lines` : ''}
                 </span>
-                {downloaded && (
-                  <span className="text-xs text-green-600 font-medium">✓ File downloaded successfully!</span>
-                )}
+                {downloaded && <span className="text-xs text-green-600 font-medium">File downloaded successfully.</span>}
               </div>
             </div>
 
-            {/* Error */}
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-                <span className="text-red-500">⚠</span> {error}
+                <span className="text-red-500">!</span> {error}
               </div>
             )}
 
-            {/* Generate button */}
             <div className="flex justify-end">
               <button
-                onClick={handleGenerate}
-                disabled={loading}
-                className="
-                  inline-flex items-center gap-2 px-8 py-3
-                  bg-[#1A3C5E] hover:bg-[#2E86C1]
-                  disabled:opacity-50 disabled:cursor-not-allowed
-                  text-white font-semibold text-sm rounded-xl
-                  shadow-md hover:shadow-lg
-                  transition-all duration-200
-                "
+                onClick={handlePreview}
+                className="inline-flex items-center gap-2 px-8 py-3 bg-[#1A3C5E] hover:bg-[#2E86C1] text-white font-semibold text-sm rounded-xl shadow-md hover:shadow-lg transition-all duration-200"
               >
-                {loading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                    </svg>
-                    Generating report…
-                  </>
-                ) : (
-                  <>
-                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h4a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-                    </svg>
-                    Generate Report (PDF)
-                  </>
-                )}
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Preview Report
               </button>
             </div>
           </section>
         </div>
       </main>
 
-      {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="max-w-7xl mx-auto px-6 py-3 text-center text-xs text-slate-400">
-          SnaveUK Report Template · Paste the text, get professional PDF
+          SnaveUK Report Template | Paste the text, preview it, get a professional PDF
         </div>
       </footer>
-
     </div>
   );
 }
