@@ -24,9 +24,15 @@ export async function POST(request) {
     const headerParts = [cover.organization, cover.project, cover.title].filter(Boolean);
     const headerText  = headerParts.join('  |  ');
 
-    // Parse markdown content to React PDF elements
-    const elements = parseToPdfElements(content || '', images);
     const logoSrc = await getBrandLogo();
+    const reportImages = {
+      'snave-uk-ltd-logo': logoSrc,
+      'snave-uk-ltd-logo.png': logoSrc,
+      ...images,
+    };
+
+    // Parse markdown content to React PDF elements
+    const elements = parseToPdfElements(content || '', reportImages);
 
     // Build and render PDF
     const pdfBuffer = await renderToBuffer(

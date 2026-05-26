@@ -6,6 +6,16 @@ import { ReportDocument } from '@/lib/pdf-template';
 import { parseToPdfElements } from '@/lib/pdf-parser';
 
 const BRAND_LOGO = '/snave-uk-ltd-logo.png';
+const BRAND_IMAGE_IDS = ['snave-uk-ltd-logo', 'snave-uk-ltd-logo.png', 'snave-uk-ltd-logo.webp'];
+
+function imageNameFromId(id) {
+  return id.replace(/^\d+-/, '');
+}
+
+function isBrandLogoName(name) {
+  const normalized = name.toLowerCase().replace(/\.(png|webp|jpg|jpeg)$/i, '');
+  return normalized === 'snave-uk-ltd-logo';
+}
 
 const SYNTAX_GUIDE = [
   { syntax: '# Heading',                 desc: 'Main section (auto-numbered)' },
@@ -63,7 +73,11 @@ export default function HomePage() {
     () => [cover.organization, cover.project, cover.title].filter(Boolean).join('  |  '),
     [cover.organization, cover.project, cover.title]
   );
-  const previewElements = useMemo(() => parseToPdfElements(content || '', images), [content, images]);
+  const reportImages = useMemo(() => ({
+    ...Object.fromEntries(BRAND_IMAGE_IDS.map(id => [id, BRAND_LOGO])),
+    ...images,
+  }), [images]);
+  const previewElements = useMemo(() => parseToPdfElements(content || '', reportImages), [content, reportImages]);
 
   const updateCover = (key, value) => {
     setCover(prev => ({ ...prev, [key]: value }));
@@ -83,7 +97,9 @@ export default function HomePage() {
   };
 
   const handleImageUpload = async (event) => {
-    const files = Array.from(event.target.files || []).filter(file => file.type.startsWith('image/'));
+    const files = Array.from(event.target.files || []).filter(file => (
+      file.type.startsWith('image/') && !isBrandLogoName(file.name)
+    ));
     if (files.length === 0) return;
 
     const loadedImages = await Promise.all(files.map(file => new Promise((resolve, reject) => {
@@ -107,9 +123,31 @@ export default function HomePage() {
   };
 
   const insertImage = (id) => {
-    const label = id.replace(/^\d+-/, '');
+    const label = imageNameFromId(id);
     const token = `\n\n![${label}](image:${id})\n\n`;
     setContent(prev => `${prev}${token}`);
+    setDownloaded(false);
+  };
+
+  const removeImage = (id) => {
+    setImages(prev => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    const escapedId = id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const imageLine = new RegExp(`\\n?\\n?!\\[[^\\]]*\\]\\(image:${escapedId}\\)\\n?`, 'g');
+    setContent(prev => prev.replace(imageLine, '\n').replace(/\n{3,}/g, '\n\n').trimEnd());
+    setDownloaded(false);
+  };
+
+  const removeManualBrandLogo = () => {
+    setContent(prev => prev
+      .split('\n')
+      .filter(line => !/!\[[^\]]*\]\(image:snave-uk-ltd-logo(?:\.(?:png|webp|jpg|jpeg))?\)/i.test(line.trim()))
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+    );
     setDownloaded(false);
   };
 
@@ -272,7 +310,10 @@ export default function HomePage() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">Snave visual identity</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Reports now use the Snave logo on the cover, a red and grey palette, and a subtle transparent logo in the internal page header.
+                  Reports automatically use the Snave logo on the cover, a red and grey palette, and a subtle transparent logo in the internal page header.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  You do not need to insert the Snave logo manually in the content.
                 </p>
               </div>
 
@@ -379,7 +420,7 @@ export default function HomePage() {
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-xs font-semibold text-[#1A3C5E] uppercase tracking-widest">Images</h3>
-                    <p className="text-xs text-slate-500 mt-1">Upload and insert images into the report content.</p>
+                    <p className="text-xs text-slate-500 mt-1">Upload content images only. The Snave logo is added automatically by the template.</p>
                   </div>
                   <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-white px-4 py-2 text-xs font-semibold text-[#1A3C5E] border border-slate-300 hover:border-[#2E86C1] transition">
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -391,10 +432,25 @@ export default function HomePage() {
                   </label>
                 </div>
 
+                {/!\[[^\]]*\]\(image:snave-uk-ltd-logo(?:\.(?:png|webp|jpg|jpeg))?\)/i.test(content) && (
+                  <div className="mt-3 flex flex-col gap-2 rounded-lg border border-red-100 bg-red-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-xs text-red-700">
+                      The Snave logo is already part of the report template.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={removeManualBrandLogo}
+                      className="rounded-md bg-white px-3 py-1.5 text-xs font-semibold text-red-700 border border-red-200 hover:bg-red-100 transition"
+                    >
+                      Remove logo line
+                    </button>
+                  </div>
+                )}
+
                 {Object.keys(images).length > 0 && (
                   <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {Object.keys(images).map(id => {
-                      const name = id.replace(/^\d+-/, '');
+                      const name = imageNameFromId(id);
                       return (
                         <div key={id} className="flex items-center gap-3 rounded-lg bg-white border border-slate-200 p-2">
                           <img src={images[id]} alt="" className="h-10 w-10 rounded object-cover border border-slate-200" />
@@ -405,6 +461,17 @@ export default function HomePage() {
                             className="rounded-md bg-[#1A3C5E] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#2E86C1] transition"
                           >
                             Insert
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeImage(id)}
+                            className="inline-flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition"
+                            aria-label={`Remove ${name}`}
+                            title="Remove image"
+                          >
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
                           </button>
                         </div>
                       );
