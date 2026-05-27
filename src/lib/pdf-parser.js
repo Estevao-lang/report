@@ -91,7 +91,7 @@ function parseInline(text) {
 // ── Table renderer ─────────────────────────────────────────────────────────
 // Uses explicit point widths (not flex:1) to prevent yoga overflow errors
 // on large documents with many tables.
-function renderTable(tableLines, key) {
+function renderTable(tableLines, key, brand = C) {
   const contentRows = tableLines.filter(l =>
     l.replace(/\|/g, '').replace(/[\s\-:]/g, '').length > 0
   );
@@ -104,17 +104,29 @@ function renderTable(tableLines, key) {
   const dataRows = contentRows.slice(1).map(parseRow);
 
   // Explicit column width — avoids unbounded flex in yoga layout engine
-  const colW       = Math.floor(PAGE_W / headers.length);
-  const isWide     = headers.length > 3;
-  const cellFs     = isWide ? 8 : 9;
-  const cellPad    = isWide ? 4 : 5;
+  const columnCount = headers.length;
+  const rowsForSizing = [headers, ...dataRows];
+  const weights = headers.map((_, ci) => {
+    const longest = Math.max(...rowsForSizing.map(row => String(row[ci] || '').length));
+    const headerBoost = /^(sku|ean|id|duration|started|date|time)$/i.test(headers[ci]) ? 1.35 : 1;
+    return Math.max(6, Math.min(longest, 34)) * headerBoost;
+  });
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || columnCount;
+  const minW = columnCount >= 5 ? 48 : 58;
+  let widths = weights.map(weight => Math.max(minW, Math.floor((weight / totalWeight) * PAGE_W)));
+  const diff = PAGE_W - widths.reduce((sum, width) => sum + width, 0);
+  widths[widths.length - 1] += diff;
+
+  const isWide = columnCount > 3;
+  const cellFs = columnCount > 5 ? 7 : (isWide ? 8 : 9);
+  const cellPad = columnCount > 5 ? 3 : (isWide ? 4 : 5);
 
   return (
     <View key={key} style={s.table}>
       {/* Header row */}
       <View style={s.tableRow} wrap={false}>
         {headers.map((h, ci) => (
-          <View key={ci} style={[s.tableCellH, { width: colW, padding: cellPad }]}>
+          <View key={ci} style={[s.tableCellH, { width: widths[ci], padding: cellPad, backgroundColor: brand.primary }]}>
             <Text style={[s.tableCellTextH, { fontSize: cellFs }]}>{parseInline(h)}</Text>
           </View>
         ))}
@@ -123,7 +135,7 @@ function renderTable(tableLines, key) {
       {dataRows.map((row, ri) => (
         <View key={ri} style={[s.tableRow, ri % 2 === 0 ? s.tableRowAlt : {}]} wrap={false}>
           {row.map((cell, ci) => (
-            <View key={ci} style={[s.tableCell, { width: colW, padding: cellPad }]}>
+            <View key={ci} style={[s.tableCell, { width: widths[ci], padding: cellPad }]}>
               <Text style={[s.tableCellText, { fontSize: cellFs }]}>{parseInline(cell)}</Text>
             </View>
           ))}
@@ -228,7 +240,7 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
         const colCount = tsvRows[0].length;
         pipeLines.splice(1, 0, '| ' + Array(colCount).fill('---').join(' | ') + ' |');
       }
-      const tbl = renderTable(pipeLines, `tbl-tsv-${i}`);
+      const tbl = renderTable(pipeLines, `tbl-tsv-${i}`, brand);
       if (tbl) elements.push(tbl);
       numCount = 0;
       continue;
@@ -241,7 +253,7 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
         tableLines.push(lines[i].trimEnd());
         i++;
       }
-      const tbl = renderTable(tableLines, `tbl-${i}`);
+      const tbl = renderTable(tableLines, `tbl-${i}`, brand);
       if (tbl) elements.push(tbl);
       numCount = 0;
       continue;
@@ -300,20 +312,20 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
     // ── Headings ──────────────────────────────────────────────────────────
     if (/^#{3}\s+/.test(line)) {
       elements.push(
-        <Text key={`h3-${i}`} style={[s.h3, { color: brand.primary }]}>{line.replace(/^#{3}\s+/, '').trim()}</Text>
+        <Text key={`h3-${i}`} style={[s.h3, { color: brand.primary }]} minPresenceAhead={80}>{line.replace(/^#{3}\s+/, '').trim()}</Text>
       );
       numCount = 0; i++; continue;
     }
     if (/^#{2}\s+/.test(line)) {
       elements.push(
-        <Text key={`h2-${i}`} style={[s.h2, { color: brand.primary }]}>{line.replace(/^#{2}\s+/, '').trim()}</Text>
+        <Text key={`h2-${i}`} style={[s.h2, { color: brand.primary }]} minPresenceAhead={120}>{line.replace(/^#{2}\s+/, '').trim()}</Text>
       );
       numCount = 0; i++; continue;
     }
     if (/^#\s+/.test(line)) {
       sectionCount++;
       elements.push(
-        <Text key={`h1-${i}`} style={[s.h1, { color: brand.accent }]}>{`${sectionCount}. ${line.replace(/^#\s+/, '').trim()}`}</Text>
+        <Text key={`h1-${i}`} style={[s.h1, { color: brand.accent }]} minPresenceAhead={140}>{`${sectionCount}. ${line.replace(/^#\s+/, '').trim()}`}</Text>
       );
       numCount = 0; i++; continue;
     }
@@ -343,11 +355,13 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
     }
 
     // ── Bullet - item ─────────────────────────────────────────────────────
-    if (/^[-*]\s+/.test(line)) {
+    const bulletMatch = line.match(/^(\s*)[-*]\s+(.+)/);
+    if (bulletMatch) {
       numCount = 0;
-      const text = line.replace(/^[-*]\s+/, '').trim();
+      const level = Math.min(3, Math.floor((bulletMatch[1] || '').replace(/\t/g, '  ').length / 2));
+      const text = bulletMatch[2].trim();
       elements.push(
-        <View key={`bul-${i}`} style={s.bulletRow}>
+        <View key={`bul-${i}`} style={[s.bulletRow, { paddingLeft: 14 + level * 22 }]}>
           <Text style={s.bulletMarker}>•</Text>
           <Text style={s.bulletContent}>{parseInline(text)}</Text>
         </View>
@@ -356,19 +370,21 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
     }
 
     // ── Numbered heading or numbered list item ────────────────────────────
-    if (/^\d+\.\s+/.test(line)) {
-      const text = line.replace(/^\d+\.\s+/, '').trim();
+    const numberedMatch = line.match(/^(\s*)\d+\.\s+(.+)/);
+    if (numberedMatch) {
+      const level = Math.min(3, Math.floor((numberedMatch[1] || '').replace(/\t/g, '  ').length / 2));
+      const text = numberedMatch[2].trim();
       if (looksLikeHeading(text)) {
         // Treat as a section heading (h2 style)
         sectionCount++;
         elements.push(
-          <Text key={`nh2-${i}`} style={[s.h2, { color: brand.primary }]}>{text}</Text>
+          <Text key={`nh2-${i}`} style={[s.h2, { color: brand.primary }]} minPresenceAhead={120}>{text}</Text>
         );
         numCount = 0;
       } else {
         numCount++;
         elements.push(
-          <View key={`num-${i}`} style={s.numRow}>
+          <View key={`num-${i}`} style={[s.numRow, { paddingLeft: 14 + level * 22 }]}>
             <Text style={s.numMarker}>{numCount}.</Text>
             <Text style={s.numContent}>{parseInline(text)}</Text>
           </View>
@@ -382,7 +398,7 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
     // Rule: starts with a letter, no internal colon, ends with colon, ≤ 60 chars
     if (/^[A-Za-zÀ-ÿ][^:\n]{0,58}:$/.test(line.trim())) {
       elements.push(
-        <Text key={`lbl-${i}`} style={[s.h3, { color: brand.primary }]}>{line.trim()}</Text>
+        <Text key={`lbl-${i}`} style={[s.h3, { color: brand.primary }]} minPresenceAhead={80}>{line.trim()}</Text>
       );
       numCount = 0; i++; continue;
     }
@@ -394,7 +410,7 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
       const t = line.trim();
       if (t.length >= 5 && !/[a-z]/.test(t) && /^[A-Z0-9\s\-—&/().,:!]+$/.test(t)) {
         elements.push(
-          <Text key={`caps-${i}`} style={[s.h2, { color: brand.primary }]}>{t}</Text>
+          <Text key={`caps-${i}`} style={[s.h2, { color: brand.primary }]} minPresenceAhead={120}>{t}</Text>
         );
         numCount = 0; i++; continue;
       }

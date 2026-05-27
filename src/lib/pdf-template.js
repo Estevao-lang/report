@@ -134,6 +134,7 @@ export const s = StyleSheet.create({
     marginTop:     20,
     marginBottom:   8,
     lineHeight:    1.2,
+    minPresenceAhead: 120,
   },
   h2: {
     fontFamily:   'Helvetica-Bold',
@@ -141,6 +142,7 @@ export const s = StyleSheet.create({
     color:         C.primary,
     marginTop:     16,
     marginBottom:   6,
+    minPresenceAhead: 110,
   },
   h3: {
     fontFamily:   'Helvetica-Bold',
@@ -148,6 +150,7 @@ export const s = StyleSheet.create({
     color:         C.primary,
     marginTop:     10,
     marginBottom:   4,
+    minPresenceAhead: 80,
   },
 
   // ── Body ────────────────────────────────────────────────────────────────
@@ -228,7 +231,7 @@ export const s = StyleSheet.create({
   },
   reportImage: {
     width:     PAGE_W,
-    maxHeight: 320,
+    maxHeight: 280,
     objectFit: 'contain',
   },
   imageCaption: {

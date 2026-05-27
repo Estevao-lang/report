@@ -367,6 +367,13 @@ export default function HomePage() {
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-[#1A3C5E]">New MAIA / Maitrics report</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Select <span className="font-semibold">MAIA / Maitrics</span> in <span className="font-semibold">Report model</span> to generate reports with the MAIA logo and matching visual identity.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">Add images</h3>
                 <p className="mt-1 text-sm text-slate-600">
                   Use <span className="font-semibold">Upload images</span>, then click <span className="font-semibold">Insert</span>. The app adds the image syntax to your report automatically.
