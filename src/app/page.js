@@ -5,8 +5,36 @@ import { PDFViewer } from '@react-pdf/renderer';
 import { ReportDocument } from '@/lib/pdf-template';
 import { parseToPdfElements } from '@/lib/pdf-parser';
 
-const BRAND_LOGO = '/snave-uk-ltd-logo.png';
-const BRAND_IMAGE_IDS = ['snave-uk-ltd-logo', 'snave-uk-ltd-logo.png', 'snave-uk-ltd-logo.webp'];
+const REPORT_MODELS = {
+  snave: {
+    id: 'snave',
+    label: 'Snave UK Ltd',
+    organization: 'SnaveUK',
+    logo: '/snave-uk-ltd-logo.png',
+    imageIds: ['snave-uk-ltd-logo', 'snave-uk-ltd-logo.png', 'snave-uk-ltd-logo.webp'],
+    theme: {
+      primary: '#4B4F54',
+      accent: '#C92234',
+      dark: '#2F3438',
+      border: '#A7ADB2',
+      lightBg: '#FFF1F3',
+    },
+  },
+  maia: {
+    id: 'maia',
+    label: 'MAIA / Maitrics',
+    organization: 'Maitrics',
+    logo: '/maia-logo.png',
+    imageIds: ['maia-logo', 'maia logo', 'maia-logo.png', 'maia logo.webp', 'nav_logo', 'nav_logo.webp'],
+    theme: {
+      primary: '#4E566B',
+      accent: '#5C6BC0',
+      dark: '#252A36',
+      border: '#AAB0C2',
+      lightBg: '#F1F3FF',
+    },
+  },
+};
 
 function imageNameFromId(id) {
   return id.replace(/^\d+-/, '');
@@ -14,7 +42,7 @@ function imageNameFromId(id) {
 
 function isBrandLogoName(name) {
   const normalized = name.toLowerCase().replace(/\.(png|webp|jpg|jpeg)$/i, '');
-  return normalized === 'snave-uk-ltd-logo';
+  return normalized === 'snave-uk-ltd-logo' || normalized === 'maia logo' || normalized === 'maia-logo' || normalized === 'nav_logo';
 }
 
 const SYNTAX_GUIDE = [
@@ -52,6 +80,7 @@ function todayLabel() {
 
 export default function HomePage() {
   const [cover, setCover] = useState({
+    model:        'snave',
     kind:         'Technical Report',
     title:        '',
     subtitle:     '',
@@ -68,19 +97,33 @@ export default function HomePage() {
   const [previewMode, setPreviewMode] = useState(false);
   const [images, setImages] = useState({});
   const [showUpdates, setShowUpdates] = useState(true);
+  const selectedModel = REPORT_MODELS[cover.model] || REPORT_MODELS.snave;
 
   const headerText = useMemo(
     () => [cover.organization, cover.project, cover.title].filter(Boolean).join('  |  '),
     [cover.organization, cover.project, cover.title]
   );
   const reportImages = useMemo(() => ({
-    ...Object.fromEntries(BRAND_IMAGE_IDS.map(id => [id, BRAND_LOGO])),
+    ...Object.fromEntries(selectedModel.imageIds.map(id => [id, selectedModel.logo])),
     ...images,
-  }), [images]);
-  const previewElements = useMemo(() => parseToPdfElements(content || '', reportImages), [content, reportImages]);
+  }), [images, selectedModel]);
+  const previewElements = useMemo(
+    () => parseToPdfElements(content || '', reportImages, selectedModel.theme),
+    [content, reportImages, selectedModel]
+  );
 
   const updateCover = (key, value) => {
     setCover(prev => ({ ...prev, [key]: value }));
+    setDownloaded(false);
+  };
+
+  const updateModel = (modelId) => {
+    const nextModel = REPORT_MODELS[modelId] || REPORT_MODELS.snave;
+    setCover(prev => ({
+      ...prev,
+      model: nextModel.id,
+      organization: nextModel.organization,
+    }));
     setDownloaded(false);
   };
 
@@ -265,8 +308,14 @@ export default function HomePage() {
               <span className="text-xs text-slate-400 font-mono">{content.split('\n').length} lines</span>
             </div>
             <div className="h-[calc(100vh-220px)] min-h-[640px] bg-slate-200">
-              <PDFViewer width="100%" height="100%" showToolbar>
-                <ReportDocument coverData={cover} elements={previewElements} headerText={headerText} logoSrc={BRAND_LOGO} />
+              <PDFViewer width="100%" height="100%" showToolbar={false}>
+                <ReportDocument
+                  coverData={cover}
+                  elements={previewElements}
+                  headerText={headerText}
+                  logoSrc={selectedModel.logo}
+                  theme={selectedModel.theme}
+                />
               </PDFViewer>
             </div>
           </div>
@@ -284,7 +333,7 @@ export default function HomePage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-[#5DADE2]">New updates</p>
-                  <h2 className="mt-1 text-xl font-bold text-white">Preview, images and Snave branding</h2>
+                  <h2 className="mt-1 text-xl font-bold text-white">Preview, images and report models</h2>
                 </div>
                 <button
                   type="button"
@@ -308,12 +357,12 @@ export default function HomePage() {
               </div>
 
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-[#1A3C5E]">Snave visual identity</h3>
+                <h3 className="text-sm font-semibold text-[#1A3C5E]">Company report models</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Reports automatically use the Snave logo on the cover, a red and grey palette, and a subtle transparent logo in the internal page header.
+                  Choose Snave UK Ltd or MAIA/Maitrics in the cover panel. Each model applies its own logo, colors, and subtle transparent header mark automatically.
                 </p>
                 <p className="mt-2 text-sm text-slate-600">
-                  You do not need to insert the Snave logo manually in the content.
+                  You do not need to insert company logos manually in the content.
                 </p>
               </div>
 
@@ -371,6 +420,18 @@ export default function HomePage() {
               <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest mb-4 pb-2 border-b border-slate-100">
                 Report Cover
               </h2>
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Report model</label>
+                <select
+                  value={cover.model}
+                  onChange={e => updateModel(e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition"
+                >
+                  {Object.values(REPORT_MODELS).map(model => (
+                    <option key={model.id} value={model.id}>{model.label}</option>
+                  ))}
+                </select>
+              </div>
               <div className="space-y-3">
                 {COVER_FIELDS.map(({ key, label, placeholder }) => (
                   <div key={key}>

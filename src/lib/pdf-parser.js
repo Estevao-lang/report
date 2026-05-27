@@ -176,8 +176,9 @@ function looksLikeHeading(text) {
 }
 
 // ── Main parser ────────────────────────────────────────────────────────────
-export function parseToPdfElements(content, images = {}) {
+export function parseToPdfElements(content, images = {}, theme = {}) {
   if (!content?.trim()) return [];
+  const brand = { ...C, ...theme };
 
   // Clean emoji before line-by-line parsing (prevents garbled characters)
   const lines = cleanEmoji(content).split('\n');
@@ -299,20 +300,20 @@ export function parseToPdfElements(content, images = {}) {
     // ── Headings ──────────────────────────────────────────────────────────
     if (/^#{3}\s+/.test(line)) {
       elements.push(
-        <Text key={`h3-${i}`} style={s.h3}>{line.replace(/^#{3}\s+/, '').trim()}</Text>
+        <Text key={`h3-${i}`} style={[s.h3, { color: brand.primary }]}>{line.replace(/^#{3}\s+/, '').trim()}</Text>
       );
       numCount = 0; i++; continue;
     }
     if (/^#{2}\s+/.test(line)) {
       elements.push(
-        <Text key={`h2-${i}`} style={s.h2}>{line.replace(/^#{2}\s+/, '').trim()}</Text>
+        <Text key={`h2-${i}`} style={[s.h2, { color: brand.primary }]}>{line.replace(/^#{2}\s+/, '').trim()}</Text>
       );
       numCount = 0; i++; continue;
     }
     if (/^#\s+/.test(line)) {
       sectionCount++;
       elements.push(
-        <Text key={`h1-${i}`} style={s.h1}>{`${sectionCount}. ${line.replace(/^#\s+/, '').trim()}`}</Text>
+        <Text key={`h1-${i}`} style={[s.h1, { color: brand.accent }]}>{`${sectionCount}. ${line.replace(/^#\s+/, '').trim()}`}</Text>
       );
       numCount = 0; i++; continue;
     }
@@ -361,7 +362,7 @@ export function parseToPdfElements(content, images = {}) {
         // Treat as a section heading (h2 style)
         sectionCount++;
         elements.push(
-          <Text key={`nh2-${i}`} style={s.h2}>{text}</Text>
+          <Text key={`nh2-${i}`} style={[s.h2, { color: brand.primary }]}>{text}</Text>
         );
         numCount = 0;
       } else {
@@ -381,7 +382,7 @@ export function parseToPdfElements(content, images = {}) {
     // Rule: starts with a letter, no internal colon, ends with colon, ≤ 60 chars
     if (/^[A-Za-zÀ-ÿ][^:\n]{0,58}:$/.test(line.trim())) {
       elements.push(
-        <Text key={`lbl-${i}`} style={s.h3}>{line.trim()}</Text>
+        <Text key={`lbl-${i}`} style={[s.h3, { color: brand.primary }]}>{line.trim()}</Text>
       );
       numCount = 0; i++; continue;
     }
@@ -393,7 +394,7 @@ export function parseToPdfElements(content, images = {}) {
       const t = line.trim();
       if (t.length >= 5 && !/[a-z]/.test(t) && /^[A-Z0-9\s\-—&/().,:!]+$/.test(t)) {
         elements.push(
-          <Text key={`caps-${i}`} style={s.h2}>{t}</Text>
+          <Text key={`caps-${i}`} style={[s.h2, { color: brand.primary }]}>{t}</Text>
         );
         numCount = 0; i++; continue;
       }

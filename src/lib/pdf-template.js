@@ -259,7 +259,8 @@ export const s = StyleSheet.create({
 });
 
 // ── Main Document component ────────────────────────────────────────────────
-export function ReportDocument({ coverData, elements, headerText, logoSrc }) {
+export function ReportDocument({ coverData, elements, headerText, logoSrc, theme = {} }) {
+  const brand = { ...C, ...theme };
   const meta = [
     coverData.project      && ['Project:',      coverData.project],
     coverData.organization && ['Organization:', coverData.organization],
@@ -279,11 +280,11 @@ export function ReportDocument({ coverData, elements, headerText, logoSrc }) {
       <Page size="LETTER" style={s.page}>
         <View style={{ marginTop: 90, marginBottom: 32 }}>
           {logoSrc ? <Image src={logoSrc} style={s.coverLogo} /> : null}
-          <View style={s.brandBar} />
-          <Text style={s.coverKind}>{coverData.kind || 'Technical Report'}</Text>
-          <Text style={s.coverTitle}>{coverData.title}</Text>
+          <View style={[s.brandBar, { backgroundColor: brand.accent }]} />
+          <Text style={[s.coverKind, { color: brand.accent }]}>{coverData.kind || 'Technical Report'}</Text>
+          <Text style={[s.coverTitle, { color: brand.primary }]}>{coverData.title}</Text>
           {!!coverData.subtitle && (
-            <Text style={s.coverSubtitle}>{coverData.subtitle}</Text>
+            <Text style={[s.coverSubtitle, { color: brand.dark }]}>{coverData.subtitle}</Text>
           )}
         </View>
 
@@ -291,7 +292,7 @@ export function ReportDocument({ coverData, elements, headerText, logoSrc }) {
 
         {meta.map(([k, v], idx) => (
           <View key={idx} style={s.coverMetaRow}>
-            <Text style={s.coverMetaKey}>{k}</Text>
+            <Text style={[s.coverMetaKey, { color: brand.primary }]}>{k}</Text>
             <Text style={s.coverMetaVal}>{v}</Text>
           </View>
         ))}
@@ -304,14 +305,14 @@ export function ReportDocument({ coverData, elements, headerText, logoSrc }) {
         {logoSrc ? <Image src={logoSrc} style={s.pageHeaderLogo} fixed /> : null}
 
         <Text
-          style={s.pageHeader}
+          style={[s.pageHeader, { color: brand.border }]}
           fixed
           render={() => headerText}
         />
 
         {/* Footer: same pattern — centered via textAlign on full-page-width element */}
         <Text
-          style={s.pageFooter}
+          style={[s.pageFooter, { color: brand.border }]}
           fixed
           render={({ pageNumber }) =>
             `Prepared for Internal Review  |  Page ${pageNumber - 1}`
@@ -321,7 +322,7 @@ export function ReportDocument({ coverData, elements, headerText, logoSrc }) {
         {elements}
 
         <View style={s.divider} />
-        <Text style={s.endLine}>— End of Report —</Text>
+        <Text style={[s.endLine, { color: brand.border }]}>— End of Report —</Text>
 
       </Page>
     </Document>
