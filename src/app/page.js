@@ -42,7 +42,11 @@ function imageNameFromId(id) {
 
 function isBrandLogoName(name) {
   const normalized = name.toLowerCase().replace(/\.(png|webp|jpg|jpeg)$/i, '');
-  return normalized === 'snave-uk-ltd-logo' || normalized === 'maia logo' || normalized === 'maia-logo' || normalized === 'nav_logo';
+  return normalized === 'snave-uk-ltd-logo'
+    || normalized === 'maia logo'
+    || normalized === 'maia-logo'
+    || normalized === 'nav_logo'
+    || normalized === 'me-ve-um-site';
 }
 
 const SYNTAX_GUIDE = [

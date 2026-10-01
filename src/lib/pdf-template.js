@@ -73,7 +73,9 @@ export const s = StyleSheet.create({
   coverLogo: {
     width:        168,
     height:        54,
-    objectFit: 'contain',
+    objectFit:   'contain',
+    alignSelf:   'flex-start',
+    marginLeft:   -20,
     marginBottom:  18,
   },
   brandBar: {
