@@ -95,6 +95,7 @@ export default function HomePage() {
   });
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
+  const [formatting, setFormatting] = useState(false);
   const [error, setError] = useState('');
   const [showGuide, setShowGuide] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -196,6 +197,27 @@ export default function HomePage() {
       .replace(/\n{3,}/g, '\n\n')
     );
     setDownloaded(false);
+  };
+
+  const autoFormat = async () => {
+    if (!content.trim()) return;
+    setFormatting(true);
+    setError('');
+    try {
+      const res = await fetch('/api/format', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: content }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Format failed.');
+      setContent(data.formatted);
+      setDownloaded(false);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setFormatting(false);
+    }
   };
 
   const handlePreview = () => {
@@ -550,6 +572,34 @@ export default function HomePage() {
                     })}
                   </div>
                 )}
+              </div>
+
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-slate-400">Write in plain text or Markdown</span>
+                <button
+                  type="button"
+                  onClick={autoFormat}
+                  disabled={formatting || !content.trim()}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-[#2E86C1] px-3 py-1.5 text-xs font-semibold text-[#2E86C1] hover:bg-[#2E86C1] hover:text-white transition disabled:opacity-40 disabled:cursor-not-allowed"
+                  title="Convert plain text to Markdown using AI"
+                >
+                  {formatting ? (
+                    <>
+                      <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                      </svg>
+                      Formatting…
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                      </svg>
+                      Auto-format
+                    </>
+                  )}
+                </button>
               </div>
 
               <textarea
