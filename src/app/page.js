@@ -34,6 +34,20 @@ const REPORT_MODELS = {
       lightBg: '#F1F3FF',
     },
   },
+  meveumsite: {
+    id: 'meveumsite',
+    label: 'Me Ve Um Site',
+    organization: 'Me Ve Um Site',
+    logo: '/logo%20me%20ve%20um%20site.png',
+    imageIds: ['logo me ve um site', 'logo me ve um site.png', 'me-ve-um-site', 'meveumsite-logo'],
+    theme: {
+      primary: '#17458F',
+      accent: '#0092F7',
+      dark: '#132A4A',
+      border: '#8AA7D6',
+      lightBg: '#EEF7FF',
+    },
+  },
 };
 
 function imageNameFromId(id) {
@@ -42,7 +56,13 @@ function imageNameFromId(id) {
 
 function isBrandLogoName(name) {
   const normalized = name.toLowerCase().replace(/\.(png|webp|jpg|jpeg)$/i, '');
-  return normalized === 'snave-uk-ltd-logo' || normalized === 'maia logo' || normalized === 'maia-logo' || normalized === 'nav_logo';
+  return normalized === 'snave-uk-ltd-logo'
+    || normalized === 'maia logo'
+    || normalized === 'maia-logo'
+    || normalized === 'nav_logo'
+    || normalized === 'logo me ve um site'
+    || normalized === 'me-ve-um-site'
+    || normalized === 'meveumsite-logo';
 }
 
 const SYNTAX_GUIDE = [
@@ -359,7 +379,7 @@ export default function HomePage() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">Company report models</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Choose Snave UK Ltd or MAIA/Maitrics in the cover panel. Each model applies its own logo, colors, and subtle transparent header mark automatically.
+                  Choose Snave UK Ltd, MAIA/Maitrics, or Me Ve Um Site in the cover panel. Each model applies its own logo, colors, and subtle transparent header mark automatically.
                 </p>
                 <p className="mt-2 text-sm text-slate-600">
                   You do not need to insert company logos manually in the content.
@@ -370,6 +390,13 @@ export default function HomePage() {
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">New MAIA / Maitrics report</h3>
                 <p className="mt-1 text-sm text-slate-600">
                   Select <span className="font-semibold">MAIA / Maitrics</span> in <span className="font-semibold">Report model</span> to generate reports with the MAIA logo and matching visual identity.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-[#1A3C5E]">New Me Ve Um Site report</h3>
+                <p className="mt-1 text-sm text-slate-600">
+                  Select <span className="font-semibold">Me Ve Um Site</span> in <span className="font-semibold">Report model</span> to generate reports with the blue logo and matching visual identity.
                 </p>
               </div>
 

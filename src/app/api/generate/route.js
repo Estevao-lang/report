@@ -28,6 +28,17 @@ const REPORT_MODELS = {
       lightBg: '#F1F3FF',
     },
   },
+  meveumsite: {
+    logoFile: 'logo me ve um site.png',
+    imageIds: ['logo me ve um site', 'logo me ve um site.png', 'me-ve-um-site', 'meveumsite-logo'],
+    theme: {
+      primary: '#17458F',
+      accent: '#0092F7',
+      dark: '#132A4A',
+      border: '#8AA7D6',
+      lightBg: '#EEF7FF',
+    },
+  },
 };
 
 async function getBrandLogo(model) {

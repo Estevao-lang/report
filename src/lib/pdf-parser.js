@@ -162,6 +162,334 @@ function renderBlockquote(bqLines, key) {
   );
 }
 
+// ── Architecture diagram :::arch...:::  ───────────────────────────────────
+// Syntax:
+//   left:   Box Label | Another Box
+//   center: Module One | Module Two
+//   right:  External API | Another
+//   infra:  AWS S3 | AWS RDS | AWS EC2 | AWS CloudFront
+// Columns: left (orange) | [API] | center (brand.primary, bordered) | [API] | right (orange)
+// Bottom:  infra row (gray boxes, 3 per row)
+function renderArchDiagram(defLines, key, brand) {
+  const leftItems   = [];
+  const centerItems = [];
+  const rightItems  = [];
+  const infraItems  = [];
+  let   infraLabel  = 'AWS Scalable Solution';
+
+  for (const line of defLines) {
+    const raw = line.trim();
+    if (!raw) continue;
+    const ci = raw.indexOf(':');
+    if (ci === -1) continue;
+    const role  = raw.slice(0, ci).trim().toLowerCase();
+    const items = raw.slice(ci + 1).split('|').map(s => s.trim()).filter(Boolean);
+    if (role === 'left')       leftItems.push(...items);
+    else if (role === 'center') centerItems.push(...items);
+    else if (role === 'right')  rightItems.push(...items);
+    else if (role === 'infra')  infraItems.push(...items);
+    else if (role === 'infralabel') infraLabel = items[0] || infraLabel;
+  }
+
+  const EXT_BG = '#C85A1F';
+  const INT_BG = brand.primary || '#1A2F5A';
+  const INF_BG = '#555A60';
+  const WHITE  = '#FFFFFF';
+  const DARK   = brand.dark   || '#2F3438';
+
+  // Widths must sum to PAGE_W (468)
+  const LW = 108;   // left column
+  const AW = 24;    // API connector text width
+  const CW = 204;   // center (platform) column
+  const RW = 108;   // right column
+  // 108 + 24 + 204 + 24 + 108 = 468
+
+  const BOX_MB  = 5;
+  const BOX_PAD = 6;
+  const BOX_MH  = 36;
+
+  const ArchBox = ({ label, bg, width }) => (
+    <View style={{
+      backgroundColor: bg,
+      width,
+      minHeight: BOX_MH,
+      marginBottom: BOX_MB,
+      paddingHorizontal: BOX_PAD,
+      paddingVertical: BOX_PAD,
+      justifyContent: 'center',
+      alignItems: 'center',
+    }}>
+      <Text style={{ color: WHITE, fontSize: 8, fontFamily: 'Helvetica-Bold', textAlign: 'center' }}>
+        {label}
+      </Text>
+    </View>
+  );
+
+  const ApiConnector = () => (
+    <View style={{ width: AW, alignItems: 'center', justifyContent: 'flex-start', paddingTop: 10 }}>
+      <Text style={{ fontSize: 7, color: DARK, fontFamily: 'Helvetica-Bold' }}>API</Text>
+    </View>
+  );
+
+  // Infra items in rows of 3
+  const infraRows = [];
+  for (let r = 0; r < infraItems.length; r += 3) infraRows.push(infraItems.slice(r, r + 3));
+  const infraCellW = Math.floor((PAGE_W - 18) / 3);
+
+  return (
+    <View key={key} style={{ marginVertical: 10 }} wrap={false}>
+      {/* 3-column layout */}
+      <View style={{ flexDirection: 'row', width: PAGE_W }}>
+        {/* Left (external) */}
+        <View style={{ width: LW }}>
+          {leftItems.map((item, idx) => <ArchBox key={idx} label={item} bg={EXT_BG} width={LW} />)}
+        </View>
+
+        <ApiConnector />
+
+        {/* Center (platform) */}
+        <View style={{ width: CW, borderWidth: 1.5, borderColor: INT_BG, padding: 6, alignItems: 'center' }}>
+          {centerItems.map((item, idx) => <ArchBox key={idx} label={item} bg={INT_BG} width={CW - 12} />)}
+        </View>
+
+        <ApiConnector />
+
+        {/* Right (external) */}
+        <View style={{ width: RW }}>
+          {rightItems.map((item, idx) => <ArchBox key={idx} label={item} bg={EXT_BG} width={RW} />)}
+        </View>
+      </View>
+
+      {/* Infra row */}
+      {infraItems.length > 0 && (
+        <View style={{ marginTop: 8, borderWidth: 1, borderColor: INF_BG, padding: 6, width: PAGE_W }}>
+          <View style={{ backgroundColor: INF_BG, paddingVertical: 4, marginBottom: 5 }}>
+            <Text style={{ color: WHITE, fontSize: 8, textAlign: 'center', fontFamily: 'Helvetica-Bold' }}>
+              {infraLabel}
+            </Text>
+          </View>
+          {infraRows.map((row, ri) => (
+            <View key={ri} style={{ flexDirection: 'row', marginBottom: 3 }}>
+              {row.map((item, ci) => (
+                <View key={ci} style={{
+                  backgroundColor: INF_BG,
+                  width: infraCellW,
+                  paddingHorizontal: 6,
+                  paddingVertical: 5,
+                  marginRight: 3,
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ color: WHITE, fontSize: 7, fontFamily: 'Helvetica-Bold', textAlign: 'center' }}>
+                    {item}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Flow diagram :::flow...:::  ───────────────────────────────────────────
+// Syntax (one step per line):   step: Label
+// Optional subtitle row:        sub: Label | Label | Label  (must match step count)
+function renderFlowDiagram(defLines, key, brand) {
+  const steps = [];
+  let   subs  = [];
+
+  for (const line of defLines) {
+    const raw = line.trim();
+    if (!raw) continue;
+    const ci = raw.indexOf(':');
+    if (ci === -1) continue;
+    const role  = raw.slice(0, ci).trim().toLowerCase();
+    const items = raw.slice(ci + 1).split('|').map(s => s.trim()).filter(Boolean);
+    if (role === 'step') steps.push(items[0] || '');
+    else if (role === 'sub') subs = items;
+  }
+
+  if (steps.length === 0) return null;
+
+  const WHITE  = '#FFFFFF';
+  const GRAY   = '#555A60';
+  const GREEN  = '#27AE60';
+  const INT_BG = brand.primary || '#1A2F5A';
+  const EXT_BG = '#C85A1F';
+
+  const isEndpoint = (s) => /^(web|app)/i.test(s);
+  const ARROW_W = 16;
+  const BOX_W  = Math.floor((PAGE_W - ARROW_W * (steps.length - 1)) / steps.length);
+
+  return (
+    <View key={key} style={{ marginVertical: 10 }} wrap={false}>
+      <View style={{ flexDirection: 'row', width: PAGE_W, alignItems: 'flex-start' }}>
+        {steps.map((step, idx) => (
+          <View key={idx} style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{
+              width: BOX_W,
+              backgroundColor: isEndpoint(step) ? EXT_BG : INT_BG,
+              paddingVertical: 8,
+              paddingHorizontal: 4,
+              alignItems: 'center',
+              minHeight: 36,
+              justifyContent: 'center',
+            }}>
+              <Text style={{ color: WHITE, fontSize: 7, fontFamily: 'Helvetica-Bold', textAlign: 'center' }}>
+                {step}
+              </Text>
+            </View>
+            {idx < steps.length - 1 && (
+              <View style={{ width: ARROW_W, alignItems: 'center' }}>
+                <Text style={{ fontSize: 10, color: brand.accent || '#C92234', fontFamily: 'Helvetica-Bold' }}>
+                  {'>'}
+                </Text>
+              </View>
+            )}
+          </View>
+        ))}
+      </View>
+      {subs.length > 0 && (
+        <View style={{ flexDirection: 'row', width: PAGE_W, marginTop: 2 }}>
+          {subs.map((sub, idx) => (
+            <View key={idx} style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{
+                width: BOX_W,
+                backgroundColor: GREEN,
+                paddingVertical: 3,
+                paddingHorizontal: 4,
+                alignItems: 'center',
+              }}>
+                <Text style={{ color: WHITE, fontSize: 6, fontFamily: 'Helvetica-Bold', textAlign: 'center' }}>
+                  {sub}
+                </Text>
+              </View>
+              {idx < subs.length - 1 && <View style={{ width: ARROW_W }} />}
+            </View>
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
+// ── Vertical flow diagram :::vflow...:::  ─────────────────────────────────
+// Syntax (one directive per line):
+//   single: Label | Subtitle | color
+//   pair:   Label | Sub | color :: Label | Sub | color
+//   triple: Label | Sub | color :: Label | Sub | color :: Label | Sub | color
+//   arrow:  (draws a connector line)
+// Colors: neutral | blue | purple | red | orange | green
+function renderVflowDiagram(defLines, key, brand) {
+  const VFLOW_COLORS = {
+    neutral: { bg: '#EDEBE8', border: '#C9C6C0', title: '#374151', sub: '#6B7280' },
+    blue:    { bg: '#DBEAFE', border: '#BFDBFE', title: '#1E3A8A', sub: '#1D4ED8' },
+    purple:  { bg: '#EDE9FE', border: '#DDD6FE', title: '#4C1D95', sub: '#6D28D9' },
+    red:     { bg: '#FEE2E2', border: '#FECACA', title: '#991B1B', sub: '#DC2626' },
+    orange:  { bg: '#FEF3C7', border: '#FDE68A', title: '#92400E', sub: '#B45309' },
+    green:   { bg: '#D1FAE5', border: '#A7F3D0', title: '#064E3B', sub: '#059669' },
+  };
+
+  // Widths: PAIR*2 + gap = 468 ; TRIPLE*3 + gap*2 = 466 (≈ PAGE_W)
+  const SINGLE_W = 280;
+  const PAIR_W   = 230;
+  const TRIPLE_W = 150;
+  const BOX_PAD  = 10;
+  const BOX_R    = 4;
+  const ARROW_H  = 14;
+
+  const parseNode = (str) => {
+    const parts = str.split('|').map(s => s.trim());
+    const colorKey = (parts[2] || 'neutral').toLowerCase();
+    return {
+      label:    parts[0] || '',
+      subtitle: parts[1] || '',
+      color:    VFLOW_COLORS[colorKey] || VFLOW_COLORS.neutral,
+    };
+  };
+
+  const boxStyle = (color, width) => ({
+    width,
+    backgroundColor: color.bg,
+    borderWidth: 1,
+    borderColor: color.border,
+    borderRadius: BOX_R,
+    paddingHorizontal: BOX_PAD,
+    paddingVertical: BOX_PAD,
+    alignItems: 'center',
+  });
+
+  const rows = [];
+
+  for (const line of defLines) {
+    const raw = line.trim();
+    if (!raw) continue;
+    const ci = raw.indexOf(':');
+    if (ci === -1) continue;
+    const type  = raw.slice(0, ci).trim().toLowerCase();
+    const value = raw.slice(ci + 1).trim();
+
+    if (type === 'arrow') {
+      rows.push(
+        <View key={rows.length} style={{ width: PAGE_W, alignItems: 'center', paddingVertical: 3 }}>
+          <View style={{ width: 1.5, height: ARROW_H, backgroundColor: '#9CA3AF' }} />
+        </View>
+      );
+      continue;
+    }
+
+    if (type === 'single') {
+      const n = parseNode(value);
+      rows.push(
+        <View key={rows.length} style={{ width: PAGE_W, alignItems: 'center' }}>
+          <View style={boxStyle(n.color, SINGLE_W)}>
+            <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', color: n.color.title, textAlign: 'center' }}>{n.label}</Text>
+            {n.subtitle ? <Text style={{ fontSize: 7.5, color: n.color.sub, textAlign: 'center', marginTop: 3 }}>{n.subtitle}</Text> : null}
+          </View>
+        </View>
+      );
+      continue;
+    }
+
+    if (type === 'pair') {
+      const nodes = value.split('::').map(s => parseNode(s.trim()));
+      rows.push(
+        <View key={rows.length} style={{ flexDirection: 'row', width: PAGE_W }}>
+          {nodes.map((n, idx) => (
+            <View key={idx} style={{ marginRight: idx < nodes.length - 1 ? 8 : 0 }}>
+              <View style={boxStyle(n.color, PAIR_W)}>
+                <Text style={{ fontSize: 8.5, fontFamily: 'Helvetica-Bold', color: n.color.title, textAlign: 'center' }}>{n.label}</Text>
+                {n.subtitle ? <Text style={{ fontSize: 7, color: n.color.sub, textAlign: 'center', marginTop: 3 }}>{n.subtitle}</Text> : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+      continue;
+    }
+
+    if (type === 'triple') {
+      const nodes = value.split('::').map(s => parseNode(s.trim()));
+      rows.push(
+        <View key={rows.length} style={{ flexDirection: 'row', width: PAGE_W }}>
+          {nodes.map((n, idx) => (
+            <View key={idx} style={{ marginRight: idx < nodes.length - 1 ? 8 : 0 }}>
+              <View style={boxStyle(n.color, TRIPLE_W)}>
+                <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', color: n.color.title, textAlign: 'center' }}>{n.label}</Text>
+                {n.subtitle ? <Text style={{ fontSize: 6.5, color: n.color.sub, textAlign: 'center', marginTop: 3 }}>{n.subtitle}</Text> : null}
+              </View>
+            </View>
+          ))}
+        </View>
+      );
+      continue;
+    }
+  }
+
+  return <View key={key} style={{ marginVertical: 10 }}>{rows}</View>;
+}
+
 // ── Alert style map ────────────────────────────────────────────────────────
 const alertStyleMap = {
   warning: { box: s.alertWarning, text: s.alertTextWarning },
@@ -201,6 +529,29 @@ export function parseToPdfElements(content, images = {}, theme = {}) {
 
   while (i < lines.length) {
     const line = lines[i].trimEnd();
+
+    // ── Architecture / Flow diagram  :::arch ... ::: or :::flow ... :::  ──
+    if (/^:::/.test(line.trim())) {
+      const blockType = line.trim().replace(/^:::/, '').trim(); // 'arch', 'flow', etc.
+      const defLines  = [];
+      i++;
+      while (i < lines.length && !/^:::/.test(lines[i].trim())) {
+        defLines.push(lines[i]);
+        i++;
+      }
+      i++; // skip closing :::
+      if (blockType === 'flow') {
+        const el = renderFlowDiagram(defLines, `flow-${i}`, brand);
+        if (el) elements.push(el);
+      } else if (blockType === 'vflow') {
+        const el = renderVflowDiagram(defLines, `vflow-${i}`, brand);
+        if (el) elements.push(el);
+      } else {
+        elements.push(renderArchDiagram(defLines, `arch-${i}`, brand));
+      }
+      numCount = 0;
+      continue;
+    }
 
     // ── Code block ```...``` ───────────────────────────────────────────────
     if (/^```/.test(line.trim())) {
