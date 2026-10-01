@@ -359,7 +359,7 @@ export default function HomePage() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-widest text-[#5DADE2]">New updates</p>
-                  <h2 className="mt-1 text-xl font-bold text-white">Preview, images and report models</h2>
+                  <h2 className="mt-1 text-xl font-bold text-white">Auto-format, diagrams and more</h2>
                 </div>
                 <button
                   type="button"
@@ -374,7 +374,33 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="px-6 py-5 space-y-4">
+            <div className="max-h-[60vh] overflow-y-auto px-6 py-5 space-y-4">
+              <div className="rounded-xl border border-[#2E86C1]/30 bg-[#EBF5FB] p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#2E86C1]">New</span>
+                  <h3 className="text-sm font-semibold text-[#1A3C5E]">Auto-format with AI</h3>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Write in plain text and click <span className="font-semibold">Auto-format</span> — the AI converts it into structured Markdown automatically. No need to know any Markdown syntax.
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  Requires a free <span className="font-semibold">Groq API key</span> configured in the environment.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-[#2E86C1]/30 bg-[#EBF5FB] p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-bold uppercase tracking-widest text-[#2E86C1]">New</span>
+                  <h3 className="text-sm font-semibold text-[#1A3C5E]">Architecture diagrams</h3>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Use <span className="font-semibold">:::arch</span>, <span className="font-semibold">:::flow</span>, and <span className="font-semibold">:::vflow</span> blocks in your Markdown to generate visual architecture diagrams directly in the PDF.
+                </p>
+                <code className="mt-3 block rounded-lg bg-white border border-slate-200 px-3 py-2 text-xs text-[#2E86C1]">
+                  :::vflow{'\n'}single: Section Title | Subtitle | blue{'\n'}arrow{'\n'}pair: Left | desc :: Right | desc{'\n'}:::
+                </code>
+              </div>
+
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">Preview before download</h3>
                 <p className="mt-1 text-sm text-slate-600">
@@ -385,17 +411,10 @@ export default function HomePage() {
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <h3 className="text-sm font-semibold text-[#1A3C5E]">Company report models</h3>
                 <p className="mt-1 text-sm text-slate-600">
-                  Choose Snave UK Ltd or MAIA/Maitrics in the cover panel. Each model applies its own logo, colors, and subtle transparent header mark automatically.
+                  Choose <span className="font-semibold">Snave UK Ltd</span> or <span className="font-semibold">MAIA / Maitrics</span> in the cover panel. Each model applies its own logo, colors, and subtle transparent header mark automatically.
                 </p>
                 <p className="mt-2 text-sm text-slate-600">
                   You do not need to insert company logos manually in the content.
-                </p>
-              </div>
-
-              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <h3 className="text-sm font-semibold text-[#1A3C5E]">New MAIA / Maitrics report</h3>
-                <p className="mt-1 text-sm text-slate-600">
-                  Select <span className="font-semibold">MAIA / Maitrics</span> in <span className="font-semibold">Report model</span> to generate reports with the MAIA logo and matching visual identity.
                 </p>
               </div>
 
@@ -408,7 +427,9 @@ export default function HomePage() {
                   ![Caption](image:file-name)
                 </code>
               </div>
+            </div>
 
+            <div className="px-6 pb-5">
               <button
                 type="button"
                 onClick={() => setShowUpdates(false)}
