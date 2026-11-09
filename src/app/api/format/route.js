@@ -40,8 +40,8 @@ ${text}`;
     const selectedModel = chatModels[0];
     if (!selectedModel) throw new Error('No suitable chat model available on this Groq account.');
     const model = selectedModel.id;
-    // Use up to 80% of the model's context window for output, capped at 32768
-    const maxOut = Math.min(Math.floor((selectedModel.context_window || 8192) * 0.8), 32768);
+    // Prefer the model's declared output limit; fall back to 16384 (safe for all Groq chat models)
+    const maxOut = Math.min(selectedModel.max_completion_tokens || 16384, 16384);
     console.log('[format] using model:', model, '| max_tokens:', maxOut);
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
