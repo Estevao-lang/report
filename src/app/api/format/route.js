@@ -37,9 +37,12 @@ ${text}`;
       .filter(m => !EXCLUDE.test(m.id) && (m.context_window || 0) >= 8192)
       .sort((a, b) => (b.context_window || 0) - (a.context_window || 0));
 
-    const model = chatModels[0]?.id;
-    if (!model) throw new Error('No suitable chat model available on this Groq account.');
-    console.log('[format] using model:', model);
+    const selectedModel = chatModels[0];
+    if (!selectedModel) throw new Error('No suitable chat model available on this Groq account.');
+    const model = selectedModel.id;
+    // Use up to 80% of the model's context window for output, capped at 32768
+    const maxOut = Math.min(Math.floor((selectedModel.context_window || 8192) * 0.8), 32768);
+    console.log('[format] using model:', model, '| max_tokens:', maxOut);
 
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -51,7 +54,7 @@ ${text}`;
         model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.3,
-        max_tokens: 4096,
+        max_tokens: maxOut,
       }),
     });
 
