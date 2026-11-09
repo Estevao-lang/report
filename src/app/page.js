@@ -96,6 +96,7 @@ export default function HomePage() {
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [formatting, setFormatting] = useState(false);
+  const [openingTab, setOpeningTab] = useState(false);
   const [error, setError] = useState('');
   const [showGuide, setShowGuide] = useState(false);
   const [downloaded, setDownloaded] = useState(false);
@@ -265,6 +266,30 @@ export default function HomePage() {
     }
   };
 
+  const handleOpenInTab = async () => {
+    if (!validateReport()) return;
+    setOpeningTab(true);
+    setError('');
+    try {
+      const res = await fetch('/api/generate', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ cover, content, images }),
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        throw new Error(json.error || `Error ${res.status}`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setOpeningTab(false);
+    }
+  };
+
   if (previewMode) {
     return (
       <div className="min-h-screen flex flex-col bg-slate-100">
@@ -283,6 +308,24 @@ export default function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
                 Edit report
+              </button>
+              <button
+                onClick={handleOpenInTab}
+                disabled={openingTab}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg border border-slate-500 text-sm font-semibold text-white hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                title="Open PDF in a new tab so links don't navigate away from the app"
+              >
+                {openingTab ? (
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                )}
+                Open in new tab
               </button>
               <button
                 onClick={handleGenerate}
