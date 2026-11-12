@@ -3,6 +3,7 @@ import { renderToBuffer } from '@react-pdf/renderer';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { ReportDocument } from '@/lib/pdf-template';
+import { ContractDocument } from '@/lib/contract-template';
 import { parseToPdfElements } from '@/lib/pdf-parser';
 
 const REPORT_MODELS = {
@@ -42,29 +43,40 @@ export async function POST(request) {
     const { cover, content, images = {} } = body;
     const selectedModel = REPORT_MODELS[cover?.model] || REPORT_MODELS.snave;
 
-    if (!cover?.title?.trim()) {
+    if (!cover?.title?.trim() && cover?.kind !== 'Service Agreement') {
       return Response.json({ error: 'O título do relatório é obrigatório.' }, { status: 400 });
     }
 
-    // Header text for every page
-    const headerParts = [cover.organization, cover.project, cover.title].filter(Boolean);
-    const headerText  = headerParts.join('  |  ');
-
     const logoSrc = await getBrandLogo(selectedModel);
-    const reportImages = {
-      ...Object.fromEntries(selectedModel.imageIds.map(id => [id, logoSrc])),
-      ...images,
-    };
 
-    // Parse markdown content to React PDF elements
-    const elements = parseToPdfElements(content || '', reportImages, selectedModel.theme);
+    let pdfBuffer;
 
-    // Build and render PDF
-    const pdfBuffer = await renderToBuffer(
-      React.createElement(ReportDocument, { coverData: cover, elements, headerText, logoSrc, theme: selectedModel.theme })
-    );
+    if (cover?.kind === 'Service Agreement') {
+      // Contract mode — render the bilingual Service Agreement
+      if (!cover?.contractorName?.trim()) {
+        return Response.json({ error: 'Contractor name is required.' }, { status: 400 });
+      }
+      pdfBuffer = await renderToBuffer(
+        React.createElement(ContractDocument, { data: cover, logoSrc })
+      );
+    } else {
+      // Standard report mode
+      const headerParts = [cover.organization, cover.project, cover.title].filter(Boolean);
+      const headerText  = headerParts.join('  |  ');
 
-    const safeFilename = (cover.title || 'relatorio')
+      const reportImages = {
+        ...Object.fromEntries(selectedModel.imageIds.map(id => [id, logoSrc])),
+        ...images,
+      };
+
+      const elements = parseToPdfElements(content || '', reportImages, selectedModel.theme);
+
+      pdfBuffer = await renderToBuffer(
+        React.createElement(ReportDocument, { coverData: cover, elements, headerText, logoSrc, theme: selectedModel.theme })
+      );
+    }
+
+    const safeFilename = (cover.contractorName || cover.title || 'relatorio')
       .replace(/[^a-zA-Z0-9\u00C0-\u024F\s_-]/g, '')
       .replace(/\s+/g, '_')
       .slice(0, 80) || 'relatorio';

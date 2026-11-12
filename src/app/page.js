@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { PDFViewer } from '@react-pdf/renderer';
 import { ReportDocument } from '@/lib/pdf-template';
+import { ContractDocument } from '@/lib/contract-template';
 import { parseToPdfElements } from '@/lib/pdf-parser';
 
 const REPORT_MODELS = {
@@ -84,15 +85,28 @@ function todayLabel() {
 
 export default function HomePage() {
   const [cover, setCover] = useState({
-    model:        'snave',
-    kind:         'Technical Report',
-    title:        '',
-    subtitle:     '',
-    project:      '',
-    organization: 'SnaveUK',
-    author:       '',
-    date:         todayLabel(),
+    model:             'snave',
+    kind:              'Technical Report',
+    title:             '',
+    subtitle:          '',
+    project:           '',
+    organization:      'SnaveUK',
+    author:            '',
+    date:              todayLabel(),
+    // Contract-specific fields
+    contractorName:    '',
+    contractorCNPJ:    '',
+    contractorCPF:     '',
+    contractorAddress: '',
+    monthlyFee:        '',
+    monthlyFeeWords:   '',
+    monthlyFeeWordsPt: '',
+    paymentDay:        '4',
+    contractDate:      '',
+    invoiceNoticeDays: '5',
   });
+
+  const isContract = cover.kind === 'Service Agreement';
   const [content, setContent] = useState('');
   const [loading, setLoading] = useState(false);
   const [formatting, setFormatting] = useState(false);
@@ -134,6 +148,13 @@ export default function HomePage() {
   };
 
   const validateReport = () => {
+    if (isContract) {
+      if (!cover.contractorName?.trim()) {
+        setError('Contractor name is required.');
+        return false;
+      }
+      return true;
+    }
     if (!cover.title.trim()) {
       setError('The report title is required.');
       return false;
@@ -369,22 +390,27 @@ export default function HomePage() {
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="px-5 py-3 border-b border-slate-200 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">{cover.title}</h2>
+                <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">
+                  {isContract ? `Service Agreement — ${cover.contractorName || 'Contractor'}` : cover.title}
+                </h2>
                 <p className="text-xs text-slate-500">
-                  {cover.organization || 'No organization'} {cover.project ? `| ${cover.project}` : ''}
+                  {isContract ? 'Snave UK Ltd  |  Software Development Contract' : `${cover.organization || 'No organization'} ${cover.project ? `| ${cover.project}` : ''}`}
                 </p>
               </div>
-              <span className="text-xs text-slate-400 font-mono">{content.split('\n').length} lines</span>
+              <span className="text-xs text-slate-400 font-mono">{isContract ? '2 pages' : `${content.split('\n').length} lines`}</span>
             </div>
             <div className="h-[calc(100vh-220px)] min-h-[640px] bg-slate-200">
               <PDFViewer width="100%" height="100%" showToolbar={false}>
-                <ReportDocument
-                  coverData={cover}
-                  elements={previewElements}
-                  headerText={headerText}
-                  logoSrc={selectedModel.logo}
-                  theme={selectedModel.theme}
-                />
+                {isContract
+                  ? <ContractDocument data={cover} logoSrc={selectedModel.logo} />
+                  : <ReportDocument
+                      coverData={cover}
+                      elements={previewElements}
+                      headerText={headerText}
+                      logoSrc={selectedModel.logo}
+                      theme={selectedModel.theme}
+                    />
+                }
               </PDFViewer>
             </div>
           </div>
@@ -529,24 +555,82 @@ export default function HomePage() {
                   ))}
                 </select>
               </div>
-              <div className="space-y-3">
-                {COVER_FIELDS.map(({ key, label, placeholder }) => (
-                  <div key={key}>
-                    <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
-                    <input
-                      type="text"
-                      value={cover[key]}
-                      onChange={e => updateCover(key, e.target.value)}
-                      placeholder={placeholder}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent placeholder:text-slate-300 transition"
-                    />
-                  </div>
-                ))}
+
+              {/* Document type selector */}
+              <div className="mb-4">
+                <label className="block text-xs font-medium text-slate-500 mb-1">Document type</label>
+                <select
+                  value={cover.kind}
+                  onChange={e => updateCover('kind', e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent transition"
+                >
+                  <option value="Technical Report">Technical Report</option>
+                  <option value="Architecture Report">Architecture Report</option>
+                  <option value="Service Agreement">Service Agreement</option>
+                </select>
               </div>
+
+              {isContract ? (
+                /* ── Contract fields ── */
+                <div className="space-y-3">
+                  <div className="rounded-lg bg-[#EBF5FB] border border-[#2E86C1]/20 px-3 py-2 text-xs text-[#1A3C5E]">
+                    Client fixed: <span className="font-semibold">Snave UK Ltd</span> — Adam Evans
+                  </div>
+                  {[
+                    { key: 'contractorName',    label: 'Contractor full name *', placeholder: 'John Smith' },
+                    { key: 'contractorCNPJ',    label: 'CNPJ',                  placeholder: '00.000.000/0001-00' },
+                    { key: 'contractorCPF',     label: 'CPF',                   placeholder: '000.000.000-00' },
+                    { key: 'contractorAddress', label: 'Address (Brazil)',       placeholder: 'Rua Example, 123, São Paulo, SP' },
+                    { key: 'monthlyFee',        label: 'Monthly fee (R$)',       placeholder: '7.000,00' },
+                    { key: 'monthlyFeeWords',   label: 'Fee in words (EN)',      placeholder: 'seven thousand' },
+                    { key: 'monthlyFeeWordsPt', label: 'Fee in words (PT)',      placeholder: 'sete mil' },
+                    { key: 'paymentDay',        label: 'Payment day',           placeholder: '4' },
+                    { key: 'contractDate',      label: 'Contract date',         placeholder: 'DD/MM/YYYY' },
+                  ].map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={cover[key] || ''}
+                        onChange={e => updateCover(key, e.target.value)}
+                        placeholder={placeholder}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent placeholder:text-slate-300 transition"
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* ── Standard report fields ── */
+                <div className="space-y-3">
+                  {COVER_FIELDS.filter(f => f.key !== 'kind').map(({ key, label, placeholder }) => (
+                    <div key={key}>
+                      <label className="block text-xs font-medium text-slate-500 mb-1">{label}</label>
+                      <input
+                        type="text"
+                        value={cover[key]}
+                        onChange={e => updateCover(key, e.target.value)}
+                        placeholder={placeholder}
+                        className="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-[#2E86C1] focus:border-transparent placeholder:text-slate-300 transition"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </aside>
 
           <section className="xl:col-span-3 space-y-5">
+            {isContract ? (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 flex flex-col items-center justify-center gap-4 min-h-[260px]">
+                <svg className="h-12 w-12 text-[#2E86C1] opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-[#1A3C5E]">Service Agreement</p>
+                  <p className="text-xs text-slate-500 mt-1">Fill in the contractor details on the left panel, then click <span className="font-semibold">Preview Report</span> to generate the bilingual contract.</p>
+                </div>
+              </div>
+            ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-sm font-semibold text-[#1A3C5E] uppercase tracking-widest">Report Content</h2>
@@ -681,6 +765,7 @@ export default function HomePage() {
                 {downloaded && <span className="text-xs text-green-600 font-medium">File downloaded successfully.</span>}
               </div>
             </div>
+            )}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
@@ -698,7 +783,7 @@ export default function HomePage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                Preview Report
+                {isContract ? 'Preview Contract' : 'Preview Report'}
               </button>
             </div>
           </section>
